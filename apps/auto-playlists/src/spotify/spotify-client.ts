@@ -47,6 +47,7 @@ interface SpotifyPlaylistItemsPage {
   items: Array<{
     added_at?: string | null;
     track?: SpotifyTrackItem | null;
+    item?: SpotifyTrackItem | null;
   }>;
   next: string | null;
 }
@@ -206,14 +207,14 @@ export class SpotifyClient {
   public async getPlaylistItems(playlistId: string): Promise<PlaylistItem[]> {
     const items: PlaylistItem[] = [];
     let nextUrl: string | null =
-      `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/tracks?limit=100&fields=next,items(added_at,track(id,uri))`;
+      `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/items?limit=50&fields=next,items(added_at,item(id,uri))`;
 
     while (nextUrl) {
       const response = await this.requestWithAuth(nextUrl, { method: "GET" }, true);
       const payload = (await response.json()) as SpotifyPlaylistItemsPage;
 
       for (const item of payload.items) {
-        const uri = item.track?.uri ?? deriveUriFromTrackId(item.track?.id);
+        const uri = item.item?.uri ?? item.track?.uri ?? deriveUriFromTrackId(item.item?.id ?? item.track?.id);
         if (!uri) {
           continue;
         }

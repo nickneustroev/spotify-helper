@@ -232,18 +232,18 @@ describe("SpotifyClient rate limiting", () => {
             items: [
               {
                 added_at: "2026-01-02T03:04:05Z",
-                track: { uri: "spotify:track:uri-a" },
+                item: { uri: "spotify:track:uri-a" },
               },
               {
                 added_at: "not-a-date",
-                track: { id: "id-b" },
+                item: { id: "id-b" },
               },
               {
                 added_at: "2026-02-01T00:00:00Z",
-                track: null,
+                item: null,
               },
             ],
-            next: "https://api.spotify.com/v1/playlists/playlist-1/tracks?offset=100",
+            next: "https://api.spotify.com/v1/playlists/playlist-1/items?offset=50",
           }),
           {
             status: 200,
@@ -283,14 +283,14 @@ describe("SpotifyClient rate limiting", () => {
 
     expect(fetchImpl).toHaveBeenNthCalledWith(
       1,
-      "https://api.spotify.com/v1/playlists/playlist-1/tracks?limit=100&fields=next,items(added_at,track(id,uri))",
+      "https://api.spotify.com/v1/playlists/playlist-1/items?limit=50&fields=next,items(added_at,item(id,uri))",
       expect.objectContaining({
         method: "GET",
       }),
     );
     expect(fetchImpl).toHaveBeenNthCalledWith(
       2,
-      "https://api.spotify.com/v1/playlists/playlist-1/tracks?offset=100",
+      "https://api.spotify.com/v1/playlists/playlist-1/items?offset=50",
       expect.objectContaining({
         method: "GET",
       }),

@@ -15,6 +15,7 @@ const AUTO_PLAYLISTS_OAUTH_SCOPES = [
   "ugc-image-upload",
   "playlist-modify-private",
   "playlist-read-private",
+  "playlist-read-collaborative",
 ] as const;
 
 @Module({

@@ -22,6 +22,8 @@ export const messages = {
   derivedPlaylistsLabel: "производные плейлисты",
   mergedPlaylistSourceNotFound: (target: string, source: string) =>
     `Плейлист-источник "${source}" для сборного плейлиста "${target}" не найден. Он будет пропущен до следующей синхронизации.`,
+  mergedPlaylistSourceFetchFailed: (target: string, source: string, message: string) =>
+    `Не удалось получить треки плейлиста-источника "${source}" для сборного плейлиста "${target}": ${message}. Источник будет пропущен до следующей синхронизации.`,
   recentFromPlaylistSourceNotFound: (source: string) =>
     `Плейлист-источник "${source}" не найден. Связанные автоплейлисты будут пропущены до следующей синхронизации.`,
   playlistTrackResolveFailed: (name: string, message: string) =>

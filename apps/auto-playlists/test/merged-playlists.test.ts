@@ -211,4 +211,49 @@ describe("createMergedPlaylistDefinitions", () => {
     expect(uris).toEqual([]);
     expect(spotifyClient.getPlaylistItems).not.toHaveBeenCalled();
   });
+
+  it("skips a source whose tracks cannot be fetched and keeps the rest", async () => {
+    const spotifyClient = {
+      findPlaylistByName: vi
+        .fn()
+        .mockResolvedValueOnce({ id: "playlist-a", name: "A" })
+        .mockResolvedValueOnce({ id: "playlist-b", name: "B" }),
+      getPlaylistItems: vi
+        .fn()
+        .mockRejectedValueOnce(new Error("Spotify API error during GET /tracks (403): Forbidden"))
+        .mockResolvedValueOnce([buildItem("spotify:track:b1", "2026-03-01T00:00:00Z")]),
+    } as unknown as SpotifyClient;
+
+    const definitions = createMergedPlaylistDefinitions({
+      merges: [{ targetName: "Mix", sourceNames: ["A", "B"] }],
+      playlistPrefix: "",
+      playlistSuffix: "[AUTO]",
+      logger: log,
+    });
+
+    const uris = await definitions[0].resolveTrackUrisAsync?.(spotifyClient);
+
+    expect(uris).toEqual(["spotify:track:b1"]);
+    expect(log.warn).toHaveBeenCalledWith(
+      'Failed to fetch tracks of source playlist "A" for merged playlist "Mix": Spotify API error during GET /tracks (403): Forbidden. The source will be skipped until the next sync.',
+    );
+  });
+
+  it("returns an empty list when every source fails to be fetched", async () => {
+    const spotifyClient = {
+      findPlaylistByName: vi.fn().mockResolvedValue({ id: "playlist-a", name: "A" }),
+      getPlaylistItems: vi.fn().mockRejectedValue(new Error("403 Forbidden")),
+    } as unknown as SpotifyClient;
+
+    const definitions = createMergedPlaylistDefinitions({
+      merges: [{ targetName: "Mix", sourceNames: ["A"] }],
+      playlistPrefix: "",
+      playlistSuffix: "[AUTO]",
+      logger: log,
+    });
+
+    const uris = await definitions[0].resolveTrackUrisAsync?.(spotifyClient);
+
+    expect(uris).toEqual([]);
+  });
 });

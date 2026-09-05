@@ -30,8 +30,20 @@ export function createMergedPlaylistDefinitions(
           continue;
         }
 
+        try {
+          collectedItems.push(...(await spotifyClient.getPlaylistItems(source.id)));
+        } catch (error) {
+          options.logger.warn(
+            t(
+              "mergedPlaylistSourceFetchFailed",
+              merge.targetName,
+              sourceName,
+              (error as Error).message,
+            ),
+          );
+          continue;
+        }
         foundSource = true;
-        collectedItems.push(...(await spotifyClient.getPlaylistItems(source.id)));
       }
 
       if (!foundSource) {

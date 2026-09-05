@@ -22,6 +22,8 @@ export const messages = {
   derivedPlaylistsLabel: "derived playlists",
   mergedPlaylistSourceNotFound: (target: string, source: string) =>
     `Source playlist "${source}" for merged playlist "${target}" was not found. It will be skipped until the next sync.`,
+  mergedPlaylistSourceFetchFailed: (target: string, source: string, message: string) =>
+    `Failed to fetch tracks of source playlist "${source}" for merged playlist "${target}": ${message}. The source will be skipped until the next sync.`,
   recentFromPlaylistSourceNotFound: (source: string) =>
     `Source playlist "${source}" was not found. Related auto playlists will be skipped until the next sync.`,
   playlistTrackResolveFailed: (name: string, message: string) =>
