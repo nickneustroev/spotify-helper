@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   parseHexColor,
+  getSafeConfigForLogs,
   loadConfig,
   parseMergedPlaylists,
   parsePlaylistSuffix,
@@ -276,6 +277,23 @@ describe("auto-playlists config parsers", () => {
       { sourceName: "Gym", windows: [30] },
     ]);
     expect(config.recentFromPlaylistsCoverColor).toBe("#1A2B3C");
+  });
+
+  it("hides database and proxy urls from the safe config for logs", () => {
+    process.env.SPOTIFY_CLIENT_ID = "test-client-id";
+    process.env.SPOTIFY_CLIENT_SECRET = "test-client-secret";
+    process.env.DATABASE_URL = "postgres://user:secret-password@db.example.com:5432/app";
+    process.env.SPOTIFY_PROXY_URL = "http://proxy-user:proxy-password@proxy.example.com:8000";
+
+    const safeConfig = getSafeConfigForLogs(loadConfig());
+    const serialized = JSON.stringify(safeConfig);
+
+    expect(safeConfig.databaseConfigured).toBe(true);
+    expect(safeConfig.spotifyProxyConfigured).toBe(true);
+    expect(serialized).not.toContain("secret-password");
+    expect(serialized).not.toContain("proxy-password");
+    expect(serialized).not.toContain("db.example.com");
+    expect(serialized).not.toContain("proxy.example.com");
   });
 
   it("uses default frequent and full sync intervals when env values are missing", () => {

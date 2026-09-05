@@ -175,7 +175,7 @@ export function getSafeConfigForLogs(cfg: AppConfig): Record<string, string | nu
     pollIntervalMs: cfg.pollIntervalMs,
     spotifyMinRequestGapMs: cfg.spotifyMinRequestGapMs,
     trackMonitoringEnabled: cfg.trackMonitoringEnabled,
-    databaseUrl: cfg.databaseUrl,
+    databaseConfigured: cfg.databaseUrl.length > 0,
     requestTimeoutMs: cfg.requestTimeoutMs,
     autoPlaylistsPlaylistPrefix: cfg.autoPlaylistsPlaylistPrefix,
     autoPlaylistsPlaylistSuffix: cfg.autoPlaylistsPlaylistSuffix,
