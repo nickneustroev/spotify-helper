@@ -3,6 +3,7 @@ import { parseRecentFromPlaylists } from "../src/core/config.js";
 import {
   buildPlaylistRecentName,
   createPlaylistRecentDefinitions,
+  stripPlaylistPrefixAndSuffix,
 } from "../src/features/playlist-recent/playlist-recent-definition.js";
 import type { PlaylistItem } from "../src/shared/types.js";
 import type { Logger } from "../src/shared/types.js";
@@ -110,6 +111,37 @@ describe("createPlaylistRecentDefinitions", () => {
 
   it("builds the name with both prefix and suffix", () => {
     expect(buildPlaylistRecentName("MU", "Rock", 50, "[AUTO]")).toBe("MU Rock 50 [AUTO]");
+  });
+
+  it("strips prefix and suffix from the source name", () => {
+    expect(stripPlaylistPrefixAndSuffix("BEST ALL [AUTO]", "", "[AUTO]")).toBe("BEST ALL");
+    expect(stripPlaylistPrefixAndSuffix("MU Rock", "MU", "[AUTO]")).toBe("Rock");
+    expect(stripPlaylistPrefixAndSuffix("MU Rock [AUTO]", "MU", "[AUTO]")).toBe("Rock");
+    expect(stripPlaylistPrefixAndSuffix("Rock", "", "")).toBe("Rock");
+  });
+
+  it("does not duplicate suffix or prefix in the generated name", () => {
+    const definitions = createPlaylistRecentDefinitions({
+      configs: [{ sourceName: "BEST ALL [AUTO]", windows: [50] }],
+      playlistPrefix: "",
+      playlistSuffix: "[AUTO]",
+      coverColor: "14532D",
+      logger: log,
+    });
+
+    expect(definitions[0].playlistName).toBe("BEST ALL 50 [AUTO]");
+  });
+
+  it("keeps the source name untouched when it has no configured prefix or suffix", () => {
+    const definitions = createPlaylistRecentDefinitions({
+      configs: [{ sourceName: "Hard Rock", windows: [50] }],
+      playlistPrefix: "",
+      playlistSuffix: "[AUTO]",
+      coverColor: "14532D",
+      logger: log,
+    });
+
+    expect(definitions[0].playlistName).toBe("Hard Rock 50 [AUTO]");
   });
 
   it("returns the first tracks in playlist order limited to the window", async () => {

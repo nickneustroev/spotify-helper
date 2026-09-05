@@ -21,7 +21,7 @@ export function createPlaylistRecentDefinitions(
       key: `playlist-recent:${encodeURIComponent(config.sourceName)}:${windowSize}`,
       playlistName: buildPlaylistRecentName(
         options.playlistPrefix,
-        config.sourceName,
+        stripPlaylistPrefixAndSuffix(config.sourceName, options.playlistPrefix, options.playlistSuffix),
         windowSize,
         options.playlistSuffix,
       ),
@@ -61,4 +61,15 @@ export function buildPlaylistRecentName(
   suffix: string,
 ): string {
   return `${prefix} ${sourceName} ${windowSize} ${suffix}`.replace(/\s+/g, " ").trim();
+}
+
+export function stripPlaylistPrefixAndSuffix(name: string, prefix: string, suffix: string): string {
+  let result = name;
+  if (prefix.length > 0 && result.startsWith(prefix)) {
+    result = result.slice(prefix.length);
+  }
+  if (suffix.length > 0 && result.endsWith(suffix)) {
+    result = result.slice(0, result.length - suffix.length);
+  }
+  return result.trim();
 }
