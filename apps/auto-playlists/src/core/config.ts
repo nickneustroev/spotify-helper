@@ -20,6 +20,11 @@ const savedInYearYearsSchema = z
   .default("")
   .transform((value) => parseSavedInYearYears(value));
 
+const mergedPlaylistsSchema = z
+  .string()
+  .default("")
+  .transform((value) => parseMergedPlaylists(value));
+
 const optionalEnv = <T extends z.ZodType>(schema: T) =>
   z.preprocess(
     (value) => (typeof value === "string" && value.trim().length === 0 ? undefined : value),
@@ -54,6 +59,7 @@ const schema = z.object({
   SAVED_IN_YEAR_COVER_COLOR: hexColorSchema(DEFAULT_SAVED_IN_YEAR_COVER_COLOR),
   SAVED_RECENT_WINDOWS: savedRecentWindowsSchema,
   SAVED_IN_YEAR_YEARS: savedInYearYearsSchema,
+  AUTO_PLAYLISTS_MERGED_PLAYLISTS: mergedPlaylistsSchema,
   SPOTIFY_PROXY_ENABLED: optionalEnv(z.string())
     .transform((v) => v === "true")
     .default(false),
@@ -78,6 +84,7 @@ export interface AppConfig {
   savedInYearCoverColor: string;
   savedRecentWindows: number[];
   savedInYearYears: number[];
+  autoPlaylistsMergedPlaylists: MergedPlaylistConfig[];
   spotifyProxyEnabled: boolean;
   spotifyProxyUrl: string;
   appLocale: "EN" | "RU";
@@ -114,6 +121,7 @@ export function loadConfig(): AppConfig {
     savedInYearCoverColor: env.SAVED_IN_YEAR_COVER_COLOR,
     savedRecentWindows: env.SAVED_RECENT_WINDOWS,
     savedInYearYears: env.SAVED_IN_YEAR_YEARS,
+    autoPlaylistsMergedPlaylists: env.AUTO_PLAYLISTS_MERGED_PLAYLISTS,
     spotifyProxyEnabled: env.SPOTIFY_PROXY_ENABLED,
     spotifyProxyUrl: env.SPOTIFY_PROXY_URL,
     appLocale: env.APP_LOCALE,
@@ -159,6 +167,7 @@ export function getSafeConfigForLogs(cfg: AppConfig): Record<string, string | nu
     savedInYearCoverColor: cfg.savedInYearCoverColor,
     savedRecentWindows: cfg.savedRecentWindows.join(","),
     savedInYearYears: cfg.savedInYearYears.join(","),
+    autoPlaylistsMergedPlaylistsCount: cfg.autoPlaylistsMergedPlaylists.length,
     spotifyProxyEnabled: cfg.spotifyProxyEnabled,
     spotifyProxyConfigured: cfg.spotifyProxyUrl.length > 0,
   };
@@ -181,6 +190,64 @@ export function parseSavedInYearYears(value: string | undefined): number[] {
     emptyMessage: "SAVED_IN_YEAR_YEARS must contain at least one year.",
     invalidMessage: (num) => `Invalid saved-in-year value "${num}". Allowed range: 2006..${currentYear + 1}.`,
   });
+}
+
+export interface MergedPlaylistConfig {
+  targetName: string;
+  sourceNames: string[];
+}
+
+export function parseMergedPlaylists(value: string | undefined): MergedPlaylistConfig[] {
+  if (value === undefined || value.trim().length === 0) {
+    return [];
+  }
+
+  const result: MergedPlaylistConfig[] = [];
+  const seenTargets = new Set<string>();
+
+  for (const rawEntry of value.split(";")) {
+    const entry = rawEntry.trim();
+    if (entry.length === 0) {
+      throw new Error(
+        'AUTO_PLAYLISTS_MERGED_PLAYLISTS contains an empty entry. Expected format "Target=Source1+Source2" separated by ";".',
+      );
+    }
+
+    const separatorIndex = entry.indexOf("=");
+    if (separatorIndex < 0) {
+      throw new Error(`Invalid merged playlists entry "${entry}". Expected format "Target=Source1+Source2".`);
+    }
+
+    const targetName = entry.slice(0, separatorIndex).trim();
+    if (targetName.length === 0) {
+      throw new Error(`Invalid merged playlists entry "${entry}": target playlist name is empty.`);
+    }
+
+    const sourcesPart = entry.slice(separatorIndex + 1).trim();
+    if (sourcesPart.length === 0) {
+      throw new Error(`Invalid merged playlists entry "${entry}": at least one source playlist is required.`);
+    }
+
+    const sourceNames: string[] = [];
+    for (const rawSource of sourcesPart.split("+")) {
+      const sourceName = rawSource.trim();
+      if (sourceName.length === 0) {
+        throw new Error(`Invalid merged playlists entry "${entry}": source playlist name is empty.`);
+      }
+      if (!sourceNames.includes(sourceName)) {
+        sourceNames.push(sourceName);
+      }
+    }
+
+    if (seenTargets.has(targetName)) {
+      throw new Error(`Invalid merged playlists entry "${entry}": duplicate target playlist "${targetName}".`);
+    }
+    seenTargets.add(targetName);
+
+    result.push({ targetName, sourceNames });
+  }
+
+  return result;
 }
 
 function parseIntegerList(

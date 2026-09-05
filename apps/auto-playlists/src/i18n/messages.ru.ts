@@ -18,6 +18,11 @@ export const messages = {
 
   savedRecentPlaylistsLabel: "недавно сохранённого",
   savedInYearPlaylistsLabel: "по годам",
+  mergedPlaylistsLabel: "сборные плейлисты",
+  mergedPlaylistSourceNotFound: (target: string, source: string) =>
+    `Плейлист-источник "${source}" для сборного плейлиста "${target}" не найден. Он будет пропущен до следующей синхронизации.`,
+  playlistTrackResolveFailed: (name: string, message: string) =>
+    `Не удалось получить треки для плейлиста "${name}": ${message}`,
   noPlaylistDefinitionsConfigured: "Автоплейлисты не настроены.",
   syncActive: (label: string, definitions: number, interval: number, initialDelay: number) =>
     `Будут обновляться автоплейлисты ${label} (плейлистов=${definitions}, интервал=${interval}мс, начальная задержка=${initialDelay}мс).`,

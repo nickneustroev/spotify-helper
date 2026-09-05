@@ -222,4 +222,78 @@ describe("SpotifyClient rate limiting", () => {
       }),
     );
   });
+
+  it("loads playlist items across pages and normalizes missing data", async () => {
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            items: [
+              {
+                added_at: "2026-01-02T03:04:05Z",
+                track: { uri: "spotify:track:uri-a" },
+              },
+              {
+                added_at: "not-a-date",
+                track: { id: "id-b" },
+              },
+              {
+                added_at: "2026-02-01T00:00:00Z",
+                track: null,
+              },
+            ],
+            next: "https://api.spotify.com/v1/playlists/playlist-1/tracks?offset=100",
+          }),
+          {
+            status: 200,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            items: [
+              {
+                added_at: null,
+                track: { uri: "spotify:track:uri-c" },
+              },
+            ],
+            next: null,
+          }),
+          {
+            status: 200,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        ),
+      );
+
+    const client = createClient(fetchImpl);
+
+    await expect(client.getPlaylistItems("playlist-1")).resolves.toEqual([
+      { trackUri: "spotify:track:uri-a", addedAt: new Date("2026-01-02T03:04:05Z") },
+      { trackUri: "spotify:track:id-b", addedAt: null },
+      { trackUri: "spotify:track:uri-c", addedAt: null },
+    ]);
+
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      1,
+      "https://api.spotify.com/v1/playlists/playlist-1/tracks?limit=100&fields=next,items(added_at,track(id,uri))",
+      expect.objectContaining({
+        method: "GET",
+      }),
+    );
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      2,
+      "https://api.spotify.com/v1/playlists/playlist-1/tracks?offset=100",
+      expect.objectContaining({
+        method: "GET",
+      }),
+    );
+  });
 });

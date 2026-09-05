@@ -3,6 +3,7 @@ import { Inject, Injectable, type OnApplicationShutdown, type OnModuleInit } fro
 import { type AppConfig, getSafeConfigForLogs } from "../core/config.js";
 import {
   AUTO_PLAYLISTS_FREQUENT_SYNC_SERVICE,
+  AUTO_PLAYLISTS_MERGED_SYNC_SERVICE,
   AUTO_PLAYLISTS_RARE_SYNC_SERVICE,
   APP_CONFIG,
   APP_LOGGER,
@@ -36,6 +37,8 @@ export class AutoPlaylistsOrchestratorService implements OnModuleInit, OnApplica
     private readonly autoPlaylistsFrequentSyncService: AutoPlaylistsSyncService | null,
     @Inject(AUTO_PLAYLISTS_RARE_SYNC_SERVICE)
     private readonly autoPlaylistsRareSyncService: AutoPlaylistsSyncService | null,
+    @Inject(AUTO_PLAYLISTS_MERGED_SYNC_SERVICE)
+    private readonly autoPlaylistsMergedSyncService: AutoPlaylistsSyncService | null,
   ) {}
 
   public async onModuleInit(): Promise<void> {
@@ -51,12 +54,17 @@ export class AutoPlaylistsOrchestratorService implements OnModuleInit, OnApplica
       this.log.info(t("trackMonitoringDisabled"));
     }
 
-    if (!this.autoPlaylistsFrequentSyncService && !this.autoPlaylistsRareSyncService) {
+    if (
+      !this.autoPlaylistsFrequentSyncService &&
+      !this.autoPlaylistsRareSyncService &&
+      !this.autoPlaylistsMergedSyncService
+    ) {
       this.log.info(t("noPlaylistDefinitionsConfigured"));
     }
 
     this.autoPlaylistsFrequentSyncService?.start();
     this.autoPlaylistsRareSyncService?.start();
+    this.autoPlaylistsMergedSyncService?.start();
   }
 
   public async onApplicationShutdown(signal?: string): Promise<void> {
@@ -69,6 +77,7 @@ export class AutoPlaylistsOrchestratorService implements OnModuleInit, OnApplica
     this.watcher.stop();
     this.autoPlaylistsFrequentSyncService?.stop();
     this.autoPlaylistsRareSyncService?.stop();
+    this.autoPlaylistsMergedSyncService?.stop();
     await this.prisma?.$disconnect();
   }
 }

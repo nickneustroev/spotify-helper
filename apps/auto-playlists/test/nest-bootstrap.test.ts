@@ -18,6 +18,7 @@ describe("Nest bootstrap lifecycle", () => {
     process.env.POLL_INTERVAL_MS = "2500";
     process.env.SAVED_RECENT_WINDOWS = "20,50,100";
     process.env.SAVED_IN_YEAR_YEARS = "2025";
+    process.env.AUTO_PLAYLISTS_MERGED_PLAYLISTS = "Merged=RECENT 20 [AUTO]+2025 [AUTO]";
     process.env.APP_LOCALE = "EN";
 
     initLocale("EN");
@@ -43,12 +44,12 @@ describe("Nest bootstrap lifecycle", () => {
     expect(SpotifyClient.prototype.initializeTransport).toHaveBeenCalledTimes(1);
     expect(PrismaClient.prototype.$queryRawUnsafe).toHaveBeenCalledWith("SELECT 1");
     expect(TrackWatcher.prototype.start).toHaveBeenCalledTimes(1);
-    expect(AutoPlaylistsSyncService.prototype.start).toHaveBeenCalledTimes(2);
+    expect(AutoPlaylistsSyncService.prototype.start).toHaveBeenCalledTimes(3);
 
     await app.close();
 
     expect(TrackWatcher.prototype.stop).toHaveBeenCalledTimes(1);
-    expect(AutoPlaylistsSyncService.prototype.stop).toHaveBeenCalledTimes(2);
+    expect(AutoPlaylistsSyncService.prototype.stop).toHaveBeenCalledTimes(3);
     expect(PrismaClient.prototype.$disconnect).toHaveBeenCalledTimes(1);
   });
 });

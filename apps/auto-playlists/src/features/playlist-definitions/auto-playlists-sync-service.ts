@@ -21,6 +21,7 @@ export interface AutoPlaylistsSyncOptions {
   syncRemovedTracksArchive?: boolean;
   isDatabasePersistenceEnabled?: () => boolean;
   savedTracksRequirements?: SavedTracksFetchRequirements;
+  fetchSavedTracks?: boolean;
   runExclusive?: <T>(modeName: string, run: () => Promise<T>) => Promise<T>;
 }
 
@@ -110,7 +111,10 @@ export class AutoPlaylistsSyncService {
       await runExclusive(this.options.syncModeName, async () => {
         this.logger.info(t("syncCycleStarted", this.options.syncLogLabel ?? this.options.syncModeName));
         await this.ensurePlaylists();
-        const savedTracks = await this.savedTracksSource.getSavedTracks(this.options.savedTracksRequirements);
+        const fetchSavedTracks = this.options.fetchSavedTracks ?? true;
+        const savedTracks = fetchSavedTracks
+          ? await this.savedTracksSource.getSavedTracks(this.options.savedTracksRequirements)
+          : [];
 
         if (
           this.options.syncRemovedTracksArchive &&
@@ -127,7 +131,20 @@ export class AutoPlaylistsSyncService {
             continue;
           }
 
-          const trackUris = definition.resolveTrackUris(savedTracks);
+          let trackUris: string[];
+          if (definition.resolveTrackUrisAsync) {
+            try {
+              trackUris = await definition.resolveTrackUrisAsync(this.spotifyClient);
+            } catch (error) {
+              this.logger.warn(
+                t("playlistTrackResolveFailed", definition.playlistName, (error as Error).message),
+              );
+              continue;
+            }
+          } else {
+            trackUris = definition.resolveTrackUris(savedTracks);
+          }
+
           const hash = hashTrackUris(trackUris);
           if (this.lastHashesByDefinitionKey.get(definition.key) === hash) {
             this.logger.info(t("playlistDoesNotRequireUpdate", definition.playlistName));

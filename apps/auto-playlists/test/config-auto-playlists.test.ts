@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   parseHexColor,
   loadConfig,
+  parseMergedPlaylists,
   parsePlaylistSuffix,
   parseSavedInYearYears,
   parseSavedRecentWindows,
@@ -23,6 +24,7 @@ const ENV_KEYS = [
   "SAVED_IN_YEAR_COVER_COLOR",
   "SAVED_RECENT_WINDOWS",
   "SAVED_IN_YEAR_YEARS",
+  "AUTO_PLAYLISTS_MERGED_PLAYLISTS",
   "SPOTIFY_PROXY_ENABLED",
   "SPOTIFY_PROXY_URL",
   "APP_LOCALE",
@@ -81,6 +83,25 @@ describe("auto-playlists config parsers", () => {
     expect(() => parseSavedInYearYears("abc,2024")).toThrow();
   });
 
+  it("parses merged playlists configuration", () => {
+    expect(parseMergedPlaylists("Mix=A+B;Gym=C")).toEqual([
+      { targetName: "Mix", sourceNames: ["A", "B"] },
+      { targetName: "Gym", sourceNames: ["C"] },
+    ]);
+  });
+
+  it("loads merged playlists from env", () => {
+    process.env.SPOTIFY_CLIENT_ID = "test-client-id";
+    process.env.SPOTIFY_CLIENT_SECRET = "test-client-secret";
+    process.env.AUTO_PLAYLISTS_MERGED_PLAYLISTS = "Mix=A+B";
+
+    const config = loadConfig();
+
+    expect(config.autoPlaylistsMergedPlaylists).toEqual([
+      { targetName: "Mix", sourceNames: ["A", "B"] },
+    ]);
+  });
+
   it("normalizes valid hex colors", () => {
     expect(parseHexColor("#000")).toBe("#000000");
     expect(parseHexColor("1a2b3c")).toBe("#1A2B3C");
@@ -117,6 +138,7 @@ describe("auto-playlists config parsers", () => {
     process.env.AUTO_PLAYLISTS_RARE_SYNC_INTERVAL_MS = " ";
     process.env.SAVED_RECENT_COVER_COLOR = "";
     process.env.SAVED_IN_YEAR_COVER_COLOR = " ";
+    process.env.AUTO_PLAYLISTS_MERGED_PLAYLISTS = "";
     process.env.SPOTIFY_PROXY_ENABLED = "";
     process.env.SPOTIFY_PROXY_URL = " ";
     process.env.APP_LOCALE = "";
@@ -134,6 +156,7 @@ describe("auto-playlists config parsers", () => {
     expect(config.autoPlaylistsRareSyncIntervalMs).toBe(10800000);
     expect(config.savedRecentCoverColor).toBe("#000000");
     expect(config.savedInYearCoverColor).toBe("#060E73");
+    expect(config.autoPlaylistsMergedPlaylists).toEqual([]);
     expect(config.spotifyProxyEnabled).toBe(false);
     expect(config.spotifyProxyUrl).toBe("");
     expect(config.appLocale).toBe("EN");
@@ -185,6 +208,7 @@ describe("auto-playlists config parsers", () => {
     expect(config.savedInYearCoverColor).toBe("#060E73");
     expect(config.savedRecentWindows).toEqual([]);
     expect(config.savedInYearYears).toEqual([]);
+    expect(config.autoPlaylistsMergedPlaylists).toEqual([]);
     expect(config.spotifyProxyEnabled).toBe(false);
     expect(config.spotifyProxyUrl).toBe("");
     expect(config.appLocale).toBe("EN");

@@ -49,6 +49,11 @@ export interface SavedTrackItem {
   addedAt: Date;
 }
 
+export interface PlaylistItem {
+  trackUri: string;
+  addedAt: Date | null;
+}
+
 export interface SpotifyAuthConfig {
   spotifyClientId: string;
   spotifyClientSecret: string;

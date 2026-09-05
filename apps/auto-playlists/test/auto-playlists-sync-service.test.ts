@@ -717,6 +717,104 @@ describe("AutoPlaylistsSyncService", () => {
     expect(getSavedTracks).toHaveBeenCalledWith({ maxRecentTracks: 2 });
   });
 
+  it("resolves track uris asynchronously and skips saved tracks fetch when disabled", async () => {
+    const replacePlaylistItems = vi.fn().mockResolvedValue(undefined);
+    const spotifyClient = {
+      getCurrentUserId: vi.fn().mockResolvedValue("user-1"),
+      hasPlaylistInLibrary: vi.fn().mockResolvedValue(true),
+      getPlaylist: vi.fn().mockResolvedValue({ id: "p2", name: "MERGED [AUTO]" }),
+      findPlaylistByName: vi.fn().mockResolvedValue({ id: "p2", name: "MERGED [AUTO]" }),
+      createPlaylist: vi.fn(),
+      replacePlaylistItems,
+      uploadPlaylistCoverImage: vi.fn(),
+    } as unknown as SpotifyClient;
+
+    const getSavedTracks = vi.fn();
+    const savedTracksSource = {
+      getSavedTracks,
+    } as unknown as SavedTracksSource;
+
+    const service = new AutoPlaylistsSyncService(
+      spotifyClient,
+      savedTracksSource,
+      archiveRepository,
+      appStateRepository,
+      log,
+      {
+        definitions: [
+          {
+            key: "merged:merge",
+            playlistName: "MERGED [AUTO]",
+            playlistDescription: "Auto-maintained merge.",
+            resolveTrackUris: () => {
+              throw new Error("unexpected resolveTrackUris call");
+            },
+            resolveTrackUrisAsync: async () => ["spotify:track:a", "spotify:track:bb"],
+          },
+        ],
+        syncIntervalMs: 15000,
+        playlistPrivate: true,
+        syncModeName: "merged",
+        fetchSavedTracks: false,
+      },
+    );
+
+    (service as unknown as { stopped: boolean }).stopped = false;
+    await service.syncNow();
+
+    expect(getSavedTracks).not.toHaveBeenCalled();
+    expect(replacePlaylistItems).toHaveBeenCalledWith("p2", ["spotify:track:a", "spotify:track:bb"]);
+    expect(log.info).toHaveBeenCalledWith('Playlist "MERGED [AUTO]" was updated.');
+  });
+
+  it("keeps playlist untouched and continues sync when async track resolution fails", async () => {
+    const replacePlaylistItems = vi.fn().mockResolvedValue(undefined);
+    const spotifyClient = {
+      getCurrentUserId: vi.fn().mockResolvedValue("user-1"),
+      hasPlaylistInLibrary: vi.fn().mockResolvedValue(true),
+      getPlaylist: vi.fn().mockResolvedValue({ id: "p2", name: "MERGED [AUTO]" }),
+      findPlaylistByName: vi.fn().mockResolvedValue({ id: "p2", name: "MERGED [AUTO]" }),
+      createPlaylist: vi.fn(),
+      replacePlaylistItems,
+      uploadPlaylistCoverImage: vi.fn(),
+    } as unknown as SpotifyClient;
+
+    const savedTracksSource = {
+      getSavedTracks: vi.fn().mockResolvedValue([]),
+    } as unknown as SavedTracksSource;
+
+    const service = new AutoPlaylistsSyncService(
+      spotifyClient,
+      savedTracksSource,
+      archiveRepository,
+      appStateRepository,
+      log,
+      {
+        definitions: [
+          {
+            key: "merged:merge",
+            playlistName: "MERGED [AUTO]",
+            playlistDescription: "Auto-maintained merge.",
+            resolveTrackUris: () => [],
+            resolveTrackUrisAsync: async () => {
+              throw new Error("source lookup failed");
+            },
+          },
+        ],
+        syncIntervalMs: 15000,
+        playlistPrivate: true,
+        syncModeName: "merged",
+      },
+    );
+
+    (service as unknown as { stopped: boolean }).stopped = false;
+    await service.syncNow();
+
+    expect(replacePlaylistItems).not.toHaveBeenCalled();
+    expect(log.warn).toHaveBeenCalledWith('Failed to resolve tracks for playlist "MERGED [AUTO]": source lookup failed');
+    expect(log.info).toHaveBeenCalledWith("Updated playlists for merged (updated=0/1).");
+  });
+
   it("backs off when Spotify rate limits the current sync mode", async () => {
     const spotifyClient = {
       getCurrentUserId: vi.fn(),

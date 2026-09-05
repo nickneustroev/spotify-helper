@@ -18,6 +18,11 @@ export const messages = {
 
   savedRecentPlaylistsLabel: "recently saved",
   savedInYearPlaylistsLabel: "by year",
+  mergedPlaylistsLabel: "merged playlists",
+  mergedPlaylistSourceNotFound: (target: string, source: string) =>
+    `Source playlist "${source}" for merged playlist "${target}" was not found. It will be skipped until the next sync.`,
+  playlistTrackResolveFailed: (name: string, message: string) =>
+    `Failed to resolve tracks for playlist "${name}": ${message}`,
   noPlaylistDefinitionsConfigured: "Auto playlists are not configured.",
   syncActive: (label: string, definitions: number, interval: number, initialDelay: number) =>
     `Auto playlists are now running for ${label} (playlists=${definitions}, interval=${interval}ms, initialDelay=${initialDelay}ms).`,

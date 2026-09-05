@@ -2,6 +2,7 @@ import { ProxyAgent } from "undici";
 import type {
   Logger,
   PlaybackSnapshot,
+  PlaylistItem,
   RecentlyPlayedItem,
   SavedTrackItem,
   SpotifyClientConfig,
@@ -39,6 +40,14 @@ interface SpotifyPlaylist {
 
 interface SpotifyPlaylistsPage {
   items: SpotifyPlaylist[];
+  next: string | null;
+}
+
+interface SpotifyPlaylistItemsPage {
+  items: Array<{
+    added_at?: string | null;
+    track?: SpotifyTrackItem | null;
+  }>;
   next: string | null;
 }
 
@@ -192,6 +201,34 @@ export class SpotifyClient {
 
     const payload = (await response.json()) as SpotifyPlaylist;
     return payload;
+  }
+
+  public async getPlaylistItems(playlistId: string): Promise<PlaylistItem[]> {
+    const items: PlaylistItem[] = [];
+    let nextUrl: string | null =
+      `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/tracks?limit=100&fields=next,items(added_at,track(id,uri))`;
+
+    while (nextUrl) {
+      const response = await this.requestWithAuth(nextUrl, { method: "GET" }, true);
+      const payload = (await response.json()) as SpotifyPlaylistItemsPage;
+
+      for (const item of payload.items) {
+        const uri = item.track?.uri ?? deriveUriFromTrackId(item.track?.id);
+        if (!uri) {
+          continue;
+        }
+
+        const addedAt = item.added_at ? new Date(item.added_at) : null;
+        items.push({
+          trackUri: uri,
+          addedAt: addedAt && !Number.isNaN(addedAt.getTime()) ? addedAt : null,
+        });
+      }
+
+      nextUrl = payload.next;
+    }
+
+    return items;
   }
 
   public async replacePlaylistItems(playlistId: string, trackUris: string[]): Promise<void> {
