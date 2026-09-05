@@ -23,9 +23,11 @@ const ENV_KEYS = [
   "AUTO_PLAYLISTS_SYNC_QUEUE_GAP_MS",
   "SAVED_RECENT_COVER_COLOR",
   "SAVED_IN_YEAR_COVER_COLOR",
+  "RECENT_FROM_PLAYLISTS_COVER_COLOR",
   "SAVED_RECENT_WINDOWS",
   "SAVED_IN_YEAR_YEARS",
   "AUTO_PLAYLISTS_MERGED_PLAYLISTS",
+  "AUTO_PLAYLISTS_RECENT_FROM_PLAYLISTS",
   "SPOTIFY_PROXY_ENABLED",
   "SPOTIFY_PROXY_URL",
   "APP_LOCALE",
@@ -140,7 +142,9 @@ describe("auto-playlists config parsers", () => {
     process.env.AUTO_PLAYLISTS_SYNC_QUEUE_GAP_MS = "";
     process.env.SAVED_RECENT_COVER_COLOR = "";
     process.env.SAVED_IN_YEAR_COVER_COLOR = " ";
+    process.env.RECENT_FROM_PLAYLISTS_COVER_COLOR = "";
     process.env.AUTO_PLAYLISTS_MERGED_PLAYLISTS = "";
+    process.env.AUTO_PLAYLISTS_RECENT_FROM_PLAYLISTS = " ";
     process.env.SPOTIFY_PROXY_ENABLED = "";
     process.env.SPOTIFY_PROXY_URL = " ";
     process.env.APP_LOCALE = "";
@@ -159,7 +163,9 @@ describe("auto-playlists config parsers", () => {
     expect(config.autoPlaylistsSyncQueueGapMs).toBe(60000);
     expect(config.savedRecentCoverColor).toBe("#000000");
     expect(config.savedInYearCoverColor).toBe("#060E73");
+    expect(config.recentFromPlaylistsCoverColor).toBe("#14532D");
     expect(config.autoPlaylistsMergedPlaylists).toEqual([]);
+    expect(config.autoPlaylistsRecentFromPlaylists).toEqual([]);
     expect(config.spotifyProxyEnabled).toBe(false);
     expect(config.spotifyProxyUrl).toBe("");
     expect(config.appLocale).toBe("EN");
@@ -210,9 +216,11 @@ describe("auto-playlists config parsers", () => {
     expect(config.autoPlaylistsSyncQueueGapMs).toBe(60000);
     expect(config.savedRecentCoverColor).toBe("#000000");
     expect(config.savedInYearCoverColor).toBe("#060E73");
+    expect(config.recentFromPlaylistsCoverColor).toBe("#14532D");
     expect(config.savedRecentWindows).toEqual([]);
     expect(config.savedInYearYears).toEqual([]);
     expect(config.autoPlaylistsMergedPlaylists).toEqual([]);
+    expect(config.autoPlaylistsRecentFromPlaylists).toEqual([]);
     expect(config.spotifyProxyEnabled).toBe(false);
     expect(config.spotifyProxyUrl).toBe("");
     expect(config.appLocale).toBe("EN");
@@ -253,6 +261,21 @@ describe("auto-playlists config parsers", () => {
     process.env.AUTO_PLAYLISTS_SYNC_QUEUE_GAP_MS = "15000";
 
     expect(loadConfig().autoPlaylistsSyncQueueGapMs).toBe(15000);
+  });
+
+  it("loads recent from playlists and cover color from env", () => {
+    process.env.SPOTIFY_CLIENT_ID = "test-client-id";
+    process.env.SPOTIFY_CLIENT_SECRET = "test-client-secret";
+    process.env.AUTO_PLAYLISTS_RECENT_FROM_PLAYLISTS = "Hard Rock=50,100;Gym=30";
+    process.env.RECENT_FROM_PLAYLISTS_COVER_COLOR = "1a2b3c";
+
+    const config = loadConfig();
+
+    expect(config.autoPlaylistsRecentFromPlaylists).toEqual([
+      { sourceName: "Hard Rock", windows: [50, 100] },
+      { sourceName: "Gym", windows: [30] },
+    ]);
+    expect(config.recentFromPlaylistsCoverColor).toBe("#1A2B3C");
   });
 
   it("uses default frequent and full sync intervals when env values are missing", () => {

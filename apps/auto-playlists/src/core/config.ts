@@ -9,6 +9,7 @@ const DEFAULT_AUTO_PLAYLISTS_RARE_SYNC_INTERVAL_MS = 10800000;
 const DEFAULT_AUTO_PLAYLISTS_SYNC_QUEUE_GAP_MS = 60000;
 const DEFAULT_SAVED_RECENT_COVER_COLOR = "000000";
 const DEFAULT_SAVED_IN_YEAR_COVER_COLOR = "060E73";
+const DEFAULT_RECENT_FROM_PLAYLISTS_COVER_COLOR = "14532D";
 const DEFAULT_APP_LOCALE = "EN";
 
 const savedRecentWindowsSchema = z
@@ -25,6 +26,11 @@ const mergedPlaylistsSchema = z
   .string()
   .default("")
   .transform((value) => parseMergedPlaylists(value));
+
+const recentFromPlaylistsSchema = z
+  .string()
+  .default("")
+  .transform((value) => parseRecentFromPlaylists(value));
 
 const optionalEnv = <T extends z.ZodType>(schema: T) =>
   z.preprocess(
@@ -61,9 +67,11 @@ const schema = z.object({
   ),
   SAVED_RECENT_COVER_COLOR: hexColorSchema(DEFAULT_SAVED_RECENT_COVER_COLOR),
   SAVED_IN_YEAR_COVER_COLOR: hexColorSchema(DEFAULT_SAVED_IN_YEAR_COVER_COLOR),
+  RECENT_FROM_PLAYLISTS_COVER_COLOR: hexColorSchema(DEFAULT_RECENT_FROM_PLAYLISTS_COVER_COLOR),
   SAVED_RECENT_WINDOWS: savedRecentWindowsSchema,
   SAVED_IN_YEAR_YEARS: savedInYearYearsSchema,
   AUTO_PLAYLISTS_MERGED_PLAYLISTS: mergedPlaylistsSchema,
+  AUTO_PLAYLISTS_RECENT_FROM_PLAYLISTS: recentFromPlaylistsSchema,
   SPOTIFY_PROXY_ENABLED: optionalEnv(z.string())
     .transform((v) => v === "true")
     .default(false),
@@ -87,9 +95,11 @@ export interface AppConfig {
   autoPlaylistsSyncQueueGapMs: number;
   savedRecentCoverColor: string;
   savedInYearCoverColor: string;
+  recentFromPlaylistsCoverColor: string;
   savedRecentWindows: number[];
   savedInYearYears: number[];
   autoPlaylistsMergedPlaylists: MergedPlaylistConfig[];
+  autoPlaylistsRecentFromPlaylists: PlaylistRecentConfig[];
   spotifyProxyEnabled: boolean;
   spotifyProxyUrl: string;
   appLocale: "EN" | "RU";
@@ -125,9 +135,11 @@ export function loadConfig(): AppConfig {
     autoPlaylistsSyncQueueGapMs: env.AUTO_PLAYLISTS_SYNC_QUEUE_GAP_MS,
     savedRecentCoverColor: env.SAVED_RECENT_COVER_COLOR,
     savedInYearCoverColor: env.SAVED_IN_YEAR_COVER_COLOR,
+    recentFromPlaylistsCoverColor: env.RECENT_FROM_PLAYLISTS_COVER_COLOR,
     savedRecentWindows: env.SAVED_RECENT_WINDOWS,
     savedInYearYears: env.SAVED_IN_YEAR_YEARS,
     autoPlaylistsMergedPlaylists: env.AUTO_PLAYLISTS_MERGED_PLAYLISTS,
+    autoPlaylistsRecentFromPlaylists: env.AUTO_PLAYLISTS_RECENT_FROM_PLAYLISTS,
     spotifyProxyEnabled: env.SPOTIFY_PROXY_ENABLED,
     spotifyProxyUrl: env.SPOTIFY_PROXY_URL,
     appLocale: env.APP_LOCALE,
@@ -172,9 +184,11 @@ export function getSafeConfigForLogs(cfg: AppConfig): Record<string, string | nu
     autoPlaylistsSyncQueueGapMs: cfg.autoPlaylistsSyncQueueGapMs,
     savedRecentCoverColor: cfg.savedRecentCoverColor,
     savedInYearCoverColor: cfg.savedInYearCoverColor,
+    recentFromPlaylistsCoverColor: cfg.recentFromPlaylistsCoverColor,
     savedRecentWindows: cfg.savedRecentWindows.join(","),
     savedInYearYears: cfg.savedInYearYears.join(","),
     autoPlaylistsMergedPlaylistsCount: cfg.autoPlaylistsMergedPlaylists.length,
+    autoPlaylistsRecentFromPlaylistsCount: cfg.autoPlaylistsRecentFromPlaylists.length,
     spotifyProxyEnabled: cfg.spotifyProxyEnabled,
     spotifyProxyConfigured: cfg.spotifyProxyUrl.length > 0,
   };
@@ -202,6 +216,11 @@ export function parseSavedInYearYears(value: string | undefined): number[] {
 export interface MergedPlaylistConfig {
   targetName: string;
   sourceNames: string[];
+}
+
+export interface PlaylistRecentConfig {
+  sourceName: string;
+  windows: number[];
 }
 
 export function parseMergedPlaylists(value: string | undefined): MergedPlaylistConfig[] {
@@ -252,6 +271,63 @@ export function parseMergedPlaylists(value: string | undefined): MergedPlaylistC
     seenTargets.add(targetName);
 
     result.push({ targetName, sourceNames });
+  }
+
+  return result;
+}
+
+export function parseRecentFromPlaylists(value: string | undefined): PlaylistRecentConfig[] {
+  if (value === undefined || value.trim().length === 0) {
+    return [];
+  }
+
+  const result: PlaylistRecentConfig[] = [];
+  const seenSources = new Set<string>();
+
+  for (const rawEntry of value.split(";")) {
+    const entry = rawEntry.trim();
+    if (entry.length === 0) {
+      throw new Error(
+        'AUTO_PLAYLISTS_RECENT_FROM_PLAYLISTS contains an empty entry. Expected format "Source=50,100" separated by ";".',
+      );
+    }
+
+    const separatorIndex = entry.indexOf("=");
+    if (separatorIndex < 0) {
+      throw new Error(
+        `Invalid recent from playlists entry "${entry}". Expected format "Source=50,100".`,
+      );
+    }
+
+    const sourceName = entry.slice(0, separatorIndex).trim();
+    if (sourceName.length === 0) {
+      throw new Error(
+        `Invalid recent from playlists entry "${entry}": source playlist name is empty.`,
+      );
+    }
+
+    const windowsPart = entry.slice(separatorIndex + 1).trim();
+    if (windowsPart.length === 0) {
+      throw new Error(
+        `AUTO_PLAYLISTS_RECENT_FROM_PLAYLISTS entry "${sourceName}" must contain at least one window size.`,
+      );
+    }
+
+    const windows = parseIntegerList(windowsPart, {
+      min: 1,
+      max: 1000,
+      emptyMessage: `AUTO_PLAYLISTS_RECENT_FROM_PLAYLISTS entry "${sourceName}" must contain at least one window size.`,
+      invalidMessage: (num) => `Invalid recent from playlists window "${num}". Allowed range: 1..1000.`,
+    });
+
+    if (seenSources.has(sourceName)) {
+      throw new Error(
+        `Invalid recent from playlists entry: duplicate source playlist "${sourceName}".`,
+      );
+    }
+    seenSources.add(sourceName);
+
+    result.push({ sourceName, windows });
   }
 
   return result;

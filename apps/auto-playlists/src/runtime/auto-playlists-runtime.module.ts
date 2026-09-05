@@ -20,6 +20,7 @@ import {
 import { AutoPlaylistsSyncService } from "../features/playlist-definitions/auto-playlists-sync-service.js";
 import { SavedTracksSource } from "../features/playlist-definitions/saved-tracks-source.js";
 import { createMergedPlaylistDefinitions } from "../features/merged-playlists/merged-playlists-definition.js";
+import { createPlaylistRecentDefinitions } from "../features/playlist-recent/playlist-recent-definition.js";
 import { createSavedInYearDefinitions } from "../features/saved-in-year/saved-in-year-definition.js";
 import { createSavedRecentDefinitions } from "../features/saved-recent/saved-recent-definition.js";
 import { t } from "../i18n/index.js";
@@ -218,12 +219,20 @@ import { TrackWatcher } from "./track-watcher.js";
         runExclusive: SyncRunner,
         databaseFeatures: DatabaseFeatures,
       ) => {
-        const definitions = createMergedPlaylistDefinitions({
+        const mergedDefinitions = createMergedPlaylistDefinitions({
           merges: cfg.autoPlaylistsMergedPlaylists,
           playlistPrefix: cfg.autoPlaylistsPlaylistPrefix,
           playlistSuffix: cfg.autoPlaylistsPlaylistSuffix,
           logger: log,
         });
+        const recentDefinitions = createPlaylistRecentDefinitions({
+          configs: cfg.autoPlaylistsRecentFromPlaylists,
+          playlistPrefix: cfg.autoPlaylistsPlaylistPrefix,
+          playlistSuffix: cfg.autoPlaylistsPlaylistSuffix,
+          coverColor: cfg.recentFromPlaylistsCoverColor,
+          logger: log,
+        });
+        const definitions = [...mergedDefinitions, ...recentDefinitions];
 
         return definitions.length > 0
           ? new AutoPlaylistsSyncService(
@@ -237,7 +246,7 @@ import { TrackWatcher } from "./track-watcher.js";
                 syncIntervalMs: cfg.autoPlaylistsRareSyncIntervalMs,
                 playlistPrivate: true,
                 syncModeName: "merged",
-                syncLogLabel: t("mergedPlaylistsLabel"),
+                syncLogLabel: t("derivedPlaylistsLabel"),
                 runExclusive,
                 syncRemovedTracksArchive: false,
                 isDatabasePersistenceEnabled: () => databaseFeatures.isPersistenceEnabled(),
