@@ -186,7 +186,7 @@ export function getSafeConfigForLogs(cfg: AppConfig): Record<string, string | nu
       .map((merge) => `${merge.targetName}=${merge.sourceNames.join("+")}`)
       .join(";"),
     autoPlaylistsRecentFromPlaylists: cfg.autoPlaylistsRecentFromPlaylists
-      .map((config) => `${config.sourceName}=${config.windows.join(",")}`)
+      .map((config) => `${config.sourceName}:${config.windows.join(",")}`)
       .join(";"),
     spotifyProxyConfigured: cfg.spotifyProxyUrl.length > 0,
     appLocale: cfg.appLocale,
@@ -287,14 +287,14 @@ export function parseRecentFromPlaylists(value: string | undefined): PlaylistRec
     const entry = rawEntry.trim();
     if (entry.length === 0) {
       throw new Error(
-        'AUTO_PLAYLISTS_RECENT_FROM_PLAYLISTS contains an empty entry. Expected format "Source=50,100" separated by ";".',
+        'AUTO_PLAYLISTS_RECENT_FROM_PLAYLISTS contains an empty entry. Expected format "Source:50,100" separated by ";".',
       );
     }
 
-    const separatorIndex = entry.indexOf("=");
+    const separatorIndex = entry.indexOf(":");
     if (separatorIndex < 0) {
       throw new Error(
-        `Invalid recent from playlists entry "${entry}". Expected format "Source=50,100".`,
+        `Invalid recent from playlists entry "${entry}". Expected format "Source:50,100".`,
       );
     }
 

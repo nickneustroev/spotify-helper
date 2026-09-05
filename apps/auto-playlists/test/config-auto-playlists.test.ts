@@ -263,7 +263,7 @@ describe("auto-playlists config parsers", () => {
   it("loads recent from playlists and cover color from env", () => {
     process.env.SPOTIFY_CLIENT_ID = "test-client-id";
     process.env.SPOTIFY_CLIENT_SECRET = "test-client-secret";
-    process.env.AUTO_PLAYLISTS_RECENT_FROM_PLAYLISTS = "Hard Rock=50,100;Gym=30";
+    process.env.AUTO_PLAYLISTS_RECENT_FROM_PLAYLISTS = "Hard Rock:50,100;Gym:30";
     process.env.RECENT_FROM_PLAYLISTS_COVER_COLOR = "1a2b3c";
 
     const config = loadConfig();
@@ -281,7 +281,7 @@ describe("auto-playlists config parsers", () => {
     process.env.DATABASE_URL = "postgres://user:secret-password@db.example.com:5432/app";
     process.env.SPOTIFY_PROXY_URL = "http://proxy-user:proxy-password@proxy.example.com:8000";
     process.env.AUTO_PLAYLISTS_MERGED_PLAYLISTS = "BEST ALL=My Action Rock+My Groove Metal";
-    process.env.AUTO_PLAYLISTS_RECENT_FROM_PLAYLISTS = "Hard Rock=50,100;Gym=30";
+    process.env.AUTO_PLAYLISTS_RECENT_FROM_PLAYLISTS = "Hard Rock:50,100;Gym:30";
 
     const safeConfig = getSafeConfigForLogs(loadConfig());
     const serialized = JSON.stringify(safeConfig);
@@ -290,7 +290,7 @@ describe("auto-playlists config parsers", () => {
     expect(safeConfig.spotifyProxyConfigured).toBe(true);
     expect(safeConfig.appLocale).toBe("EN");
     expect(safeConfig.autoPlaylistsMergedPlaylists).toBe("BEST ALL=My Action Rock+My Groove Metal");
-    expect(safeConfig.autoPlaylistsRecentFromPlaylists).toBe("Hard Rock=50,100;Gym=30");
+    expect(safeConfig.autoPlaylistsRecentFromPlaylists).toBe("Hard Rock:50,100;Gym:30");
     expect(serialized).not.toContain("secret-password");
     expect(serialized).not.toContain("proxy-password");
     expect(serialized).not.toContain("db.example.com");

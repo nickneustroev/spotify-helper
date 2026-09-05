@@ -30,59 +30,56 @@ describe("parseRecentFromPlaylists", () => {
   });
 
   it("parses a single entry with one window and trims the name", () => {
-    expect(parseRecentFromPlaylists(" Hard Rock = 50 ")).toEqual([
+    expect(parseRecentFromPlaylists(" Hard Rock : 50 ")).toEqual([
       { sourceName: "Hard Rock", windows: [50] },
     ]);
   });
 
   it("parses several windows per source and several sources", () => {
-    expect(parseRecentFromPlaylists("Hard Rock=100,50;Gym=30")).toEqual([
+    expect(parseRecentFromPlaylists("Hard Rock:100,50;Gym:30")).toEqual([
       { sourceName: "Hard Rock", windows: [50, 100] },
       { sourceName: "Gym", windows: [30] },
     ]);
   });
 
   it("deduplicates windows", () => {
-    expect(parseRecentFromPlaylists("Rock=50,50,100")).toEqual([
+    expect(parseRecentFromPlaylists("Rock:50,50,100")).toEqual([
       { sourceName: "Rock", windows: [50, 100] },
     ]);
   });
 
-  it("treats everything after the first equals sign as windows", () => {
-    expect(parseRecentFromPlaylists("Hard Rock=50")).toEqual([
-      { sourceName: "Hard Rock", windows: [50] },
+  it("keeps equals signs inside the source name", () => {
+    expect(parseRecentFromPlaylists("Weird=name:50")).toEqual([
+      { sourceName: "Weird=name", windows: [50] },
     ]);
-    expect(() => parseRecentFromPlaylists("Weird=name=50")).toThrow(
-      /Invalid recent from playlists window/,
-    );
   });
 
-  it("throws when an entry has no equals sign", () => {
+  it("throws when an entry has no colon", () => {
     expect(() => parseRecentFromPlaylists("Hard Rock 50")).toThrow(/Expected format/);
   });
 
   it("throws when an entry is empty", () => {
-    expect(() => parseRecentFromPlaylists("Rock=50;;Gym=30")).toThrow(/empty entry/);
+    expect(() => parseRecentFromPlaylists("Rock:50;;Gym:30")).toThrow(/empty entry/);
   });
 
   it("throws when the source name is empty", () => {
-    expect(() => parseRecentFromPlaylists("=50")).toThrow(/source playlist name is empty/);
+    expect(() => parseRecentFromPlaylists(":50")).toThrow(/source playlist name is empty/);
   });
 
   it("throws when there are no windows", () => {
-    expect(() => parseRecentFromPlaylists("Rock=")).toThrow(
+    expect(() => parseRecentFromPlaylists("Rock:")).toThrow(
       /must contain at least one window size/,
     );
   });
 
   it("throws on invalid window values", () => {
-    expect(() => parseRecentFromPlaylists("Rock=abc")).toThrow(/Invalid recent from playlists window/);
-    expect(() => parseRecentFromPlaylists("Rock=0")).toThrow(/Invalid recent from playlists window/);
-    expect(() => parseRecentFromPlaylists("Rock=1001")).toThrow(/Invalid recent from playlists window/);
+    expect(() => parseRecentFromPlaylists("Rock:abc")).toThrow(/Invalid recent from playlists window/);
+    expect(() => parseRecentFromPlaylists("Rock:0")).toThrow(/Invalid recent from playlists window/);
+    expect(() => parseRecentFromPlaylists("Rock:1001")).toThrow(/Invalid recent from playlists window/);
   });
 
   it("throws on duplicate sources", () => {
-    expect(() => parseRecentFromPlaylists("Rock=50;Rock=100")).toThrow(/duplicate source playlist/);
+    expect(() => parseRecentFromPlaylists("Rock:50;Rock:100")).toThrow(/duplicate source playlist/);
   });
 });
 
