@@ -22,7 +22,6 @@ const baseConfig: AppConfig = {
   savedInYearCoverColor: "#000000",
   savedRecentWindows: [],
   savedInYearYears: [],
-  spotifyProxyEnabled: false,
   spotifyProxyUrl: "",
   appLocale: "EN",
 };

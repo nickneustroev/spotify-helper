@@ -13,7 +13,6 @@ const log: Logger = {
 const cfg: SpotifyClientConfig = {
   requestTimeoutMs: 5000,
   minRequestGapMs: 25,
-  spotifyProxyEnabled: false,
   spotifyProxyUrl: "",
 };
 

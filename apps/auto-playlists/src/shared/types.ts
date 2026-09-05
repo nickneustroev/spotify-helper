@@ -65,6 +65,5 @@ export interface SpotifyAuthConfig {
 export interface SpotifyClientConfig {
   requestTimeoutMs: number;
   minRequestGapMs: number;
-  spotifyProxyEnabled: boolean;
   spotifyProxyUrl: string;
 }

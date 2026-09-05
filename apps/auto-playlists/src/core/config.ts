@@ -72,9 +72,6 @@ const schema = z.object({
   SAVED_IN_YEAR_YEARS: savedInYearYearsSchema,
   AUTO_PLAYLISTS_MERGED_PLAYLISTS: mergedPlaylistsSchema,
   AUTO_PLAYLISTS_RECENT_FROM_PLAYLISTS: recentFromPlaylistsSchema,
-  SPOTIFY_PROXY_ENABLED: optionalEnv(z.string())
-    .transform((v) => v === "true")
-    .default(false),
   SPOTIFY_PROXY_URL: optionalEnv(z.string()).default(""),
   APP_LOCALE: optionalEnv(z.enum(["EN", "RU"])).default(DEFAULT_APP_LOCALE),
 });
@@ -100,7 +97,6 @@ export interface AppConfig {
   savedInYearYears: number[];
   autoPlaylistsMergedPlaylists: MergedPlaylistConfig[];
   autoPlaylistsRecentFromPlaylists: PlaylistRecentConfig[];
-  spotifyProxyEnabled: boolean;
   spotifyProxyUrl: string;
   appLocale: "EN" | "RU";
 }
@@ -140,7 +136,6 @@ export function loadConfig(): AppConfig {
     savedInYearYears: env.SAVED_IN_YEAR_YEARS,
     autoPlaylistsMergedPlaylists: env.AUTO_PLAYLISTS_MERGED_PLAYLISTS,
     autoPlaylistsRecentFromPlaylists: env.AUTO_PLAYLISTS_RECENT_FROM_PLAYLISTS,
-    spotifyProxyEnabled: env.SPOTIFY_PROXY_ENABLED,
     spotifyProxyUrl: env.SPOTIFY_PROXY_URL,
     appLocale: env.APP_LOCALE,
   };
@@ -187,10 +182,14 @@ export function getSafeConfigForLogs(cfg: AppConfig): Record<string, string | nu
     recentFromPlaylistsCoverColor: cfg.recentFromPlaylistsCoverColor,
     savedRecentWindows: cfg.savedRecentWindows.join(","),
     savedInYearYears: cfg.savedInYearYears.join(","),
-    autoPlaylistsMergedPlaylistsCount: cfg.autoPlaylistsMergedPlaylists.length,
-    autoPlaylistsRecentFromPlaylistsCount: cfg.autoPlaylistsRecentFromPlaylists.length,
-    spotifyProxyEnabled: cfg.spotifyProxyEnabled,
+    autoPlaylistsMergedPlaylists: cfg.autoPlaylistsMergedPlaylists
+      .map((merge) => `${merge.targetName}=${merge.sourceNames.join("+")}`)
+      .join(";"),
+    autoPlaylistsRecentFromPlaylists: cfg.autoPlaylistsRecentFromPlaylists
+      .map((config) => `${config.sourceName}=${config.windows.join(",")}`)
+      .join(";"),
     spotifyProxyConfigured: cfg.spotifyProxyUrl.length > 0,
+    appLocale: cfg.appLocale,
   };
 }
 

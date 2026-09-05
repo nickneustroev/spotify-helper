@@ -65,7 +65,6 @@ const AUTO_PLAYLISTS_OAUTH_SCOPES = [
           {
             requestTimeoutMs: cfg.requestTimeoutMs,
             minRequestGapMs: cfg.spotifyMinRequestGapMs,
-            spotifyProxyEnabled: cfg.spotifyProxyEnabled,
             spotifyProxyUrl: cfg.spotifyProxyUrl,
           } satisfies SpotifyClientConfig,
           log,

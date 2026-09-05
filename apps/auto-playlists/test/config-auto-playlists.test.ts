@@ -29,7 +29,6 @@ const ENV_KEYS = [
   "SAVED_IN_YEAR_YEARS",
   "AUTO_PLAYLISTS_MERGED_PLAYLISTS",
   "AUTO_PLAYLISTS_RECENT_FROM_PLAYLISTS",
-  "SPOTIFY_PROXY_ENABLED",
   "SPOTIFY_PROXY_URL",
   "APP_LOCALE",
 ] as const;
@@ -146,7 +145,6 @@ describe("auto-playlists config parsers", () => {
     process.env.RECENT_FROM_PLAYLISTS_COVER_COLOR = "";
     process.env.AUTO_PLAYLISTS_MERGED_PLAYLISTS = "";
     process.env.AUTO_PLAYLISTS_RECENT_FROM_PLAYLISTS = " ";
-    process.env.SPOTIFY_PROXY_ENABLED = "";
     process.env.SPOTIFY_PROXY_URL = " ";
     process.env.APP_LOCALE = "";
 
@@ -167,7 +165,6 @@ describe("auto-playlists config parsers", () => {
     expect(config.recentFromPlaylistsCoverColor).toBe("#14532D");
     expect(config.autoPlaylistsMergedPlaylists).toEqual([]);
     expect(config.autoPlaylistsRecentFromPlaylists).toEqual([]);
-    expect(config.spotifyProxyEnabled).toBe(false);
     expect(config.spotifyProxyUrl).toBe("");
     expect(config.appLocale).toBe("EN");
   });
@@ -222,7 +219,6 @@ describe("auto-playlists config parsers", () => {
     expect(config.savedInYearYears).toEqual([]);
     expect(config.autoPlaylistsMergedPlaylists).toEqual([]);
     expect(config.autoPlaylistsRecentFromPlaylists).toEqual([]);
-    expect(config.spotifyProxyEnabled).toBe(false);
     expect(config.spotifyProxyUrl).toBe("");
     expect(config.appLocale).toBe("EN");
   });
@@ -284,16 +280,22 @@ describe("auto-playlists config parsers", () => {
     process.env.SPOTIFY_CLIENT_SECRET = "test-client-secret";
     process.env.DATABASE_URL = "postgres://user:secret-password@db.example.com:5432/app";
     process.env.SPOTIFY_PROXY_URL = "http://proxy-user:proxy-password@proxy.example.com:8000";
+    process.env.AUTO_PLAYLISTS_MERGED_PLAYLISTS = "BEST ALL=My Action Rock+My Groove Metal";
+    process.env.AUTO_PLAYLISTS_RECENT_FROM_PLAYLISTS = "Hard Rock=50,100;Gym=30";
 
     const safeConfig = getSafeConfigForLogs(loadConfig());
     const serialized = JSON.stringify(safeConfig);
 
     expect(safeConfig.databaseConfigured).toBe(true);
     expect(safeConfig.spotifyProxyConfigured).toBe(true);
+    expect(safeConfig.appLocale).toBe("EN");
+    expect(safeConfig.autoPlaylistsMergedPlaylists).toBe("BEST ALL=My Action Rock+My Groove Metal");
+    expect(safeConfig.autoPlaylistsRecentFromPlaylists).toBe("Hard Rock=50,100;Gym=30");
     expect(serialized).not.toContain("secret-password");
     expect(serialized).not.toContain("proxy-password");
     expect(serialized).not.toContain("db.example.com");
     expect(serialized).not.toContain("proxy.example.com");
+    expect(serialized).not.toContain("test-client-secret");
   });
 
   it("uses default frequent and full sync intervals when env values are missing", () => {

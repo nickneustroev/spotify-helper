@@ -36,7 +36,6 @@ describe("AutoPlaylistsOrchestratorService", () => {
       savedInYearYears: [],
       autoPlaylistsMergedPlaylists: [],
       autoPlaylistsRecentFromPlaylists: [],
-      spotifyProxyEnabled: false,
       spotifyProxyUrl: "",
       appLocale: "RU",
     } as AppConfig;
@@ -103,7 +102,6 @@ describe("AutoPlaylistsOrchestratorService", () => {
       savedInYearYears: [],
       autoPlaylistsMergedPlaylists: [{ targetName: "Mix", sourceNames: ["A"] }],
       autoPlaylistsRecentFromPlaylists: [],
-      spotifyProxyEnabled: false,
       spotifyProxyUrl: "",
       appLocale: "RU",
     } as AppConfig;
