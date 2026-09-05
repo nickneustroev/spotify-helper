@@ -112,13 +112,16 @@ export class AutoPlaylistsSyncService {
         this.logger.info(t("syncCycleStarted", this.options.syncLogLabel ?? this.options.syncModeName));
         await this.ensurePlaylists();
         const fetchSavedTracks = this.options.fetchSavedTracks ?? true;
+        const databasePersistenceEnabled = this.options.isDatabasePersistenceEnabled?.() ?? true;
         const savedTracks = fetchSavedTracks
-          ? await this.savedTracksSource.getSavedTracks(this.options.savedTracksRequirements)
+          ? await this.savedTracksSource.getSavedTracks(
+              this.resolveSavedTracksRequirements(databasePersistenceEnabled),
+            )
           : [];
 
         if (
           this.options.syncRemovedTracksArchive &&
-          (this.options.isDatabasePersistenceEnabled?.() ?? true)
+          databasePersistenceEnabled
         ) {
           await this.syncRemovedTracksArchive(savedTracks);
         }
@@ -255,6 +258,14 @@ export class AutoPlaylistsSyncService {
         );
       }
     }
+  }
+
+  private resolveSavedTracksRequirements(databasePersistenceEnabled: boolean): SavedTracksFetchRequirements | undefined {
+    if (this.options.syncRemovedTracksArchive && databasePersistenceEnabled) {
+      return undefined;
+    }
+
+    return this.options.savedTracksRequirements;
   }
 
   private async syncRemovedTracksArchive(currentSavedTracks: SavedTrackItem[]): Promise<void> {

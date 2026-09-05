@@ -129,6 +129,33 @@ describe("SavedTracksSource", () => {
     expect(getSavedTracksPage).toHaveBeenNthCalledWith(1, 2, 0);
     expect(getSavedTracksPage).toHaveBeenNthCalledWith(2, 2, 2);
   });
+
+  it("stops scanning saved tracks after reaching tracks older than the minimum year", async () => {
+    const getSavedTracksPage = vi
+      .fn()
+      .mockResolvedValueOnce({
+        tracks: [
+          buildSavedTrack("a", "2024-05-01T10:00:00.000Z"),
+          buildSavedTrack("b", "2023-04-01T10:00:00.000Z"),
+        ],
+        total: 6,
+      })
+      .mockResolvedValueOnce({
+        tracks: [
+          buildSavedTrack("c", "2023-03-01T10:00:00.000Z"),
+          buildSavedTrack("d", "2022-12-01T10:00:00.000Z"),
+        ],
+        total: 6,
+      });
+
+    const source = new SavedTracksSource({ getSavedTracksPage } as unknown as SpotifyClient, 2);
+    const tracks = await source.getSavedTracks({ minSavedYear: 2023 });
+
+    expect(tracks.map((track) => track.trackId)).toEqual(["a", "b", "c"]);
+    expect(getSavedTracksPage).toHaveBeenCalledTimes(2);
+    expect(getSavedTracksPage).toHaveBeenNthCalledWith(1, 2, 0);
+    expect(getSavedTracksPage).toHaveBeenNthCalledWith(2, 2, 2);
+  });
 });
 
 describe("filterSavedTracks", () => {

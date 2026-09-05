@@ -14,8 +14,8 @@ export class SavedTracksSource {
   ) {}
 
   public async getSavedTracks(requirements: SavedTracksFetchRequirements = {}): Promise<SavedTrackItem[]> {
-    if (shouldFetchAllSavedTracks(requirements)) {
-      return this.getAllSavedTracks();
+    if (requirements.minSavedYear !== undefined) {
+      return this.getSavedTracksSinceYear(requirements.minSavedYear, requirements);
     }
 
     const maxRecentTracks = Math.max(0, requirements.maxRecentTracks ?? 0);
@@ -85,6 +85,44 @@ export class SavedTracksSource {
       .sort((left, right) => right.addedAt.getTime() - left.addedAt.getTime())
       .slice(0, limit);
   }
+
+  public async getSavedTracksSinceYear(
+    minSavedYear: number,
+    requirements: SavedTracksFetchRequirements = { minSavedYear },
+  ): Promise<SavedTrackItem[]> {
+    let lastCollectedTracks: SavedTrackItem[] = [];
+
+    for (let attempt = 1; attempt <= this.maxScanAttempts; attempt += 1) {
+      const firstPage = await this.spotifyClient.getSavedTracksPage(this.pageSize, 0);
+      const collectedTracks = [...firstPage.tracks];
+      let offset = firstPage.tracks.length;
+      let reachedOlderTracks = hasTracksBeforeYear(firstPage.tracks, minSavedYear);
+
+      while (!reachedOlderTracks && offset > 0 && offset < firstPage.total) {
+        const page = await this.spotifyClient.getSavedTracksPage(this.pageSize, offset);
+        if (page.tracks.length === 0) {
+          break;
+        }
+
+        collectedTracks.push(...page.tracks);
+        offset += page.tracks.length;
+        reachedOlderTracks = hasTracksBeforeYear(page.tracks, minSavedYear);
+      }
+
+      lastCollectedTracks = filterSavedTracks(dedupeSavedTracks(collectedTracks), requirements);
+
+      if (reachedOlderTracks || firstPage.total <= this.pageSize || attempt === this.maxScanAttempts) {
+        break;
+      }
+
+      const verificationPage = await this.spotifyClient.getSavedTracksPage(this.pageSize, 0);
+      if (isStableFirstPage(firstPage, verificationPage)) {
+        break;
+      }
+    }
+
+    return lastCollectedTracks.sort((left, right) => right.addedAt.getTime() - left.addedAt.getTime());
+  }
 }
 
 export function filterSavedTracks(
@@ -130,10 +168,6 @@ function dedupeSavedTracks(tracks: SavedTrackItem[]): SavedTrackItem[] {
   return deduped;
 }
 
-function shouldFetchAllSavedTracks(requirements: SavedTracksFetchRequirements): boolean {
-  return requirements.minSavedYear !== undefined || (requirements.maxRecentTracks ?? 0) <= 0;
-}
-
 function isStableFirstPage(
   left: { tracks: SavedTrackItem[]; total: number },
   right: { tracks: SavedTrackItem[]; total: number },
@@ -150,4 +184,8 @@ function isStableFirstPage(
       track.addedAt.getTime() === candidate.addedAt.getTime()
     );
   });
+}
+
+function hasTracksBeforeYear(tracks: SavedTrackItem[], minSavedYear: number): boolean {
+  return tracks.some((track) => track.addedAt.getUTCFullYear() < minSavedYear);
 }

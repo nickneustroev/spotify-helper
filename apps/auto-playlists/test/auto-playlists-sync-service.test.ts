@@ -246,6 +246,7 @@ describe("AutoPlaylistsSyncService", () => {
         syncModeName: "rare",
         syncRemovedTracksArchive: true,
         isDatabasePersistenceEnabled: () => false,
+        savedTracksRequirements: { minSavedYear: 2024 },
       },
     );
 
@@ -253,8 +254,54 @@ describe("AutoPlaylistsSyncService", () => {
     await service.syncNow();
 
     expect(localArchive.upsertArchivedTrack).not.toHaveBeenCalled();
+    expect(savedTracksSource.getSavedTracks).toHaveBeenCalledWith({ minSavedYear: 2024 });
     expect(localAppState.setValue).toHaveBeenCalledTimes(1);
     expect(localAppState.setValue).toHaveBeenCalledWith("auto_playlists:playlist_id:saved-recent:2", "p2");
+  });
+
+  it("fetches a full saved tracks snapshot when removed tracks archive is enabled", async () => {
+    const spotifyClient = {
+      getCurrentUserId: vi.fn().mockResolvedValue("user-1"),
+      hasPlaylistInLibrary: vi.fn().mockResolvedValue(true),
+      getPlaylist: vi.fn().mockResolvedValue({ id: "p2", name: "2024 [AUTO]" }),
+      findPlaylistByName: vi.fn().mockResolvedValue({ id: "p2", name: "2024 [AUTO]" }),
+      createPlaylist: vi.fn(),
+      replacePlaylistItems: vi.fn().mockResolvedValue(undefined),
+      uploadPlaylistCoverImage: vi.fn(),
+    } as unknown as SpotifyClient;
+
+    const savedTracksSource = {
+      getSavedTracks: vi.fn().mockResolvedValue([buildSavedTrack("a")]),
+    } as unknown as SavedTracksSource;
+
+    const service = new AutoPlaylistsSyncService(
+      spotifyClient,
+      savedTracksSource,
+      archiveRepository,
+      appStateRepository,
+      log,
+      {
+        definitions: [
+          {
+            key: "saved-in-year:2024",
+            playlistName: "2024 [AUTO]",
+            playlistDescription: "Auto-maintained saved tracks from 2024.",
+            resolveTrackUris: (savedTracks) => savedTracks.map((track) => track.trackUri),
+          },
+        ],
+        syncIntervalMs: 15000,
+        playlistPrivate: true,
+        syncModeName: "rare",
+        syncRemovedTracksArchive: true,
+        isDatabasePersistenceEnabled: () => true,
+        savedTracksRequirements: { minSavedYear: 2024 },
+      },
+    );
+
+    (service as unknown as { stopped: boolean }).stopped = false;
+    await service.syncNow();
+
+    expect(savedTracksSource.getSavedTracks).toHaveBeenCalledWith(undefined);
   });
 
   it("hashes uri arrays deterministically", () => {
