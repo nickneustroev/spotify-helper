@@ -20,6 +20,7 @@ const ENV_KEYS = [
   "AUTO_PLAYLISTS_PLAYLIST_SUFFIX",
   "AUTO_PLAYLISTS_FREQUENT_SYNC_INTERVAL_MS",
   "AUTO_PLAYLISTS_RARE_SYNC_INTERVAL_MS",
+  "AUTO_PLAYLISTS_SYNC_QUEUE_GAP_MS",
   "SAVED_RECENT_COVER_COLOR",
   "SAVED_IN_YEAR_COVER_COLOR",
   "SAVED_RECENT_WINDOWS",
@@ -136,6 +137,7 @@ describe("auto-playlists config parsers", () => {
     process.env.AUTO_PLAYLISTS_PLAYLIST_SUFFIX = "";
     process.env.AUTO_PLAYLISTS_FREQUENT_SYNC_INTERVAL_MS = "";
     process.env.AUTO_PLAYLISTS_RARE_SYNC_INTERVAL_MS = " ";
+    process.env.AUTO_PLAYLISTS_SYNC_QUEUE_GAP_MS = "";
     process.env.SAVED_RECENT_COVER_COLOR = "";
     process.env.SAVED_IN_YEAR_COVER_COLOR = " ";
     process.env.AUTO_PLAYLISTS_MERGED_PLAYLISTS = "";
@@ -154,6 +156,7 @@ describe("auto-playlists config parsers", () => {
     expect(config.autoPlaylistsPlaylistSuffix).toBe("[AUTO]");
     expect(config.autoPlaylistsFrequentSyncIntervalMs).toBe(600000);
     expect(config.autoPlaylistsRareSyncIntervalMs).toBe(10800000);
+    expect(config.autoPlaylistsSyncQueueGapMs).toBe(60000);
     expect(config.savedRecentCoverColor).toBe("#000000");
     expect(config.savedInYearCoverColor).toBe("#060E73");
     expect(config.autoPlaylistsMergedPlaylists).toEqual([]);
@@ -204,6 +207,7 @@ describe("auto-playlists config parsers", () => {
     expect(config.autoPlaylistsPlaylistSuffix).toBe("[AUTO]");
     expect(config.autoPlaylistsFrequentSyncIntervalMs).toBe(600000);
     expect(config.autoPlaylistsRareSyncIntervalMs).toBe(10800000);
+    expect(config.autoPlaylistsSyncQueueGapMs).toBe(60000);
     expect(config.savedRecentCoverColor).toBe("#000000");
     expect(config.savedInYearCoverColor).toBe("#060E73");
     expect(config.savedRecentWindows).toEqual([]);
@@ -241,6 +245,14 @@ describe("auto-playlists config parsers", () => {
     process.env.AUTO_PLAYLISTS_FREQUENT_SYNC_INTERVAL_MS = "45000";
 
     expect(loadConfig().autoPlaylistsFrequentSyncIntervalMs).toBe(45000);
+  });
+
+  it("uses sync queue gap from env when it is configured", () => {
+    process.env.SPOTIFY_CLIENT_ID = "test-client-id";
+    process.env.SPOTIFY_CLIENT_SECRET = "test-client-secret";
+    process.env.AUTO_PLAYLISTS_SYNC_QUEUE_GAP_MS = "15000";
+
+    expect(loadConfig().autoPlaylistsSyncQueueGapMs).toBe(15000);
   });
 
   it("uses default frequent and full sync intervals when env values are missing", () => {

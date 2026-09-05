@@ -6,6 +6,7 @@ const DEFAULT_POLL_INTERVAL_MS = 5000;
 const DEFAULT_SPOTIFY_MIN_REQUEST_GAP_MS = 100;
 const DEFAULT_AUTO_PLAYLISTS_FREQUENT_SYNC_INTERVAL_MS = 600000;
 const DEFAULT_AUTO_PLAYLISTS_RARE_SYNC_INTERVAL_MS = 10800000;
+const DEFAULT_AUTO_PLAYLISTS_SYNC_QUEUE_GAP_MS = 60000;
 const DEFAULT_SAVED_RECENT_COVER_COLOR = "000000";
 const DEFAULT_SAVED_IN_YEAR_COVER_COLOR = "060E73";
 const DEFAULT_APP_LOCALE = "EN";
@@ -55,6 +56,9 @@ const schema = z.object({
     z.coerce.number().int().min(5000),
   )
     .default(DEFAULT_AUTO_PLAYLISTS_RARE_SYNC_INTERVAL_MS),
+  AUTO_PLAYLISTS_SYNC_QUEUE_GAP_MS: optionalEnv(z.coerce.number().int().min(0)).default(
+    DEFAULT_AUTO_PLAYLISTS_SYNC_QUEUE_GAP_MS,
+  ),
   SAVED_RECENT_COVER_COLOR: hexColorSchema(DEFAULT_SAVED_RECENT_COVER_COLOR),
   SAVED_IN_YEAR_COVER_COLOR: hexColorSchema(DEFAULT_SAVED_IN_YEAR_COVER_COLOR),
   SAVED_RECENT_WINDOWS: savedRecentWindowsSchema,
@@ -80,6 +84,7 @@ export interface AppConfig {
   autoPlaylistsPlaylistSuffix: string;
   autoPlaylistsFrequentSyncIntervalMs: number;
   autoPlaylistsRareSyncIntervalMs: number;
+  autoPlaylistsSyncQueueGapMs: number;
   savedRecentCoverColor: string;
   savedInYearCoverColor: string;
   savedRecentWindows: number[];
@@ -117,6 +122,7 @@ export function loadConfig(): AppConfig {
     autoPlaylistsPlaylistSuffix: env.AUTO_PLAYLISTS_PLAYLIST_SUFFIX,
     autoPlaylistsFrequentSyncIntervalMs: env.AUTO_PLAYLISTS_FREQUENT_SYNC_INTERVAL_MS,
     autoPlaylistsRareSyncIntervalMs: env.AUTO_PLAYLISTS_RARE_SYNC_INTERVAL_MS,
+    autoPlaylistsSyncQueueGapMs: env.AUTO_PLAYLISTS_SYNC_QUEUE_GAP_MS,
     savedRecentCoverColor: env.SAVED_RECENT_COVER_COLOR,
     savedInYearCoverColor: env.SAVED_IN_YEAR_COVER_COLOR,
     savedRecentWindows: env.SAVED_RECENT_WINDOWS,
@@ -163,6 +169,7 @@ export function getSafeConfigForLogs(cfg: AppConfig): Record<string, string | nu
     autoPlaylistsPlaylistSuffix: cfg.autoPlaylistsPlaylistSuffix,
     autoPlaylistsFrequentSyncIntervalMs: cfg.autoPlaylistsFrequentSyncIntervalMs,
     autoPlaylistsRareSyncIntervalMs: cfg.autoPlaylistsRareSyncIntervalMs,
+    autoPlaylistsSyncQueueGapMs: cfg.autoPlaylistsSyncQueueGapMs,
     savedRecentCoverColor: cfg.savedRecentCoverColor,
     savedInYearCoverColor: cfg.savedInYearCoverColor,
     savedRecentWindows: cfg.savedRecentWindows.join(","),

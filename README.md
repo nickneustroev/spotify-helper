@@ -56,6 +56,7 @@
 - `SAVED_RECENT_COVER_COLOR`, `SAVED_IN_YEAR_COVER_COLOR` - цвета обложек в формате HEX без `#`.
 - `AUTO_PLAYLISTS_FREQUENT_SYNC_INTERVAL_MS` - интервал обновления recent-плейлистов.
 - `AUTO_PLAYLISTS_RARE_SYNC_INTERVAL_MS` - интервал обновления year-плейлистов.
+- `AUTO_PLAYLISTS_SYNC_QUEUE_GAP_MS` - обязательная пауза между циклами синхронизации в общей очереди.
 - `POLL_INTERVAL_MS` - интервал проверки текущего трека.
 - `SPOTIFY_MIN_REQUEST_GAP_MS` - минимальная пауза между запросами к Spotify API.
 
@@ -96,6 +97,7 @@ SAVED_IN_YEAR_COVER_COLOR=060E73
 
 AUTO_PLAYLISTS_FREQUENT_SYNC_INTERVAL_MS=600000
 AUTO_PLAYLISTS_RARE_SYNC_INTERVAL_MS=10800000
+AUTO_PLAYLISTS_SYNC_QUEUE_GAP_MS=60000
 POLL_INTERVAL_MS=5000
 SPOTIFY_MIN_REQUEST_GAP_MS=100
 ```

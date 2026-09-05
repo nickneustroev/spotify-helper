@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { type AppConfig } from "../core/config.js";
+import { createSyncRunner, type SyncRunner } from "./sync-runner.js";
 import { CoreModule } from "../core/core.module.js";
 import {
   APP_CONFIG,
@@ -33,34 +34,13 @@ import { AutoPlaylistsOrchestratorService } from "./auto-playlists-orchestrator.
 import { ConsoleNotifier } from "./console-notifier.js";
 import { TrackWatcher } from "./track-watcher.js";
 
-const RARE_SYNC_INITIAL_DELAY_MS = 60_000;
-
-type SyncRunner = <T>(modeName: string, run: () => Promise<T>) => Promise<T>;
-
 @Module({
   imports: [CoreModule, SpotifyModule, PersistenceModule],
   providers: [
     {
       provide: AUTO_PLAYLISTS_SYNC_RUNNER,
-      useFactory: (): SyncRunner => {
-        let syncQueue = Promise.resolve();
-
-        return async <T>(_modeName: string, run: () => Promise<T>): Promise<T> => {
-          const previous = syncQueue;
-          let release!: () => void;
-          syncQueue = new Promise<void>((resolve) => {
-            release = resolve;
-          });
-
-          await previous.catch(() => undefined);
-
-          try {
-            return await run();
-          } finally {
-            release();
-          }
-        };
-      },
+      inject: [APP_CONFIG],
+      useFactory: (cfg: AppConfig): SyncRunner => createSyncRunner(cfg.autoPlaylistsSyncQueueGapMs),
     },
     {
       provide: CONSOLE_NOTIFIER,
@@ -202,7 +182,6 @@ type SyncRunner = <T>(modeName: string, run: () => Promise<T>) => Promise<T>;
               {
                 definitions,
                 syncIntervalMs: cfg.autoPlaylistsRareSyncIntervalMs,
-                initialDelayMs: RARE_SYNC_INITIAL_DELAY_MS,
                 playlistPrivate: true,
                 syncModeName: "rare",
                 syncLogLabel: t("savedInYearPlaylistsLabel"),
@@ -256,7 +235,6 @@ type SyncRunner = <T>(modeName: string, run: () => Promise<T>) => Promise<T>;
               {
                 definitions,
                 syncIntervalMs: cfg.autoPlaylistsRareSyncIntervalMs,
-                initialDelayMs: RARE_SYNC_INITIAL_DELAY_MS,
                 playlistPrivate: true,
                 syncModeName: "merged",
                 syncLogLabel: t("mergedPlaylistsLabel"),
