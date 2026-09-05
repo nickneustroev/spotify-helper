@@ -104,7 +104,7 @@ describe("createPlaylistRecentDefinitions", () => {
     expect(definitions[0].key).toBe(`playlist-recent:${encodeURIComponent("Hard Rock")}:50`);
     expect(definitions[1].key).toBe(`playlist-recent:${encodeURIComponent("Hard Rock")}:100`);
     expect(definitions[0].playlistDescription).toBe(
-      'Auto-maintained last 50 tracks from playlist "Hard Rock".',
+      'Auto-maintained top 50 tracks from playlist "Hard Rock".',
     );
   });
 
@@ -112,19 +112,19 @@ describe("createPlaylistRecentDefinitions", () => {
     expect(buildPlaylistRecentName("MU", "Rock", 50, "[AUTO]")).toBe("MU Rock 50 [AUTO]");
   });
 
-  it("returns the last tracks by added date limited to the window", async () => {
+  it("returns the first tracks in playlist order limited to the window", async () => {
     const spotifyClient = {
       findPlaylistByName: vi.fn().mockResolvedValue({ id: "playlist-rock", name: "Hard Rock" }),
       getPlaylistItems: vi.fn().mockResolvedValue([
-        buildItem("spotify:track:old", "2025-01-01T00:00:00Z"),
-        buildItem("spotify:track:newest", "2026-03-01T00:00:00Z"),
-        buildItem("spotify:track:middle", "2026-02-01T00:00:00Z"),
-        buildItem("spotify:track:newest", "2026-03-01T00:00:00Z"),
+        buildItem("spotify:track:first", "2025-01-01T00:00:00Z"),
+        buildItem("spotify:track:second", "2026-03-01T00:00:00Z"),
+        buildItem("spotify:track:third", "2026-02-01T00:00:00Z"),
+        buildItem("spotify:track:fourth", "2026-01-01T00:00:00Z"),
       ]),
     } as unknown as SpotifyClient;
 
     const definitions = createPlaylistRecentDefinitions({
-      configs: [{ sourceName: "Hard Rock", windows: [2] }],
+      configs: [{ sourceName: "Hard Rock", windows: [3] }],
       playlistPrefix: "",
       playlistSuffix: "[AUTO]",
       coverColor: "14532D",
@@ -133,9 +133,37 @@ describe("createPlaylistRecentDefinitions", () => {
 
     const uris = await definitions[0].resolveTrackUrisAsync?.(spotifyClient);
 
-    expect(uris).toEqual(["spotify:track:newest", "spotify:track:middle"]);
+    expect(uris).toEqual([
+      "spotify:track:first",
+      "spotify:track:second",
+      "spotify:track:third",
+    ]);
     expect(spotifyClient.findPlaylistByName).toHaveBeenCalledWith("Hard Rock");
     expect(spotifyClient.getPlaylistItems).toHaveBeenCalledWith("playlist-rock");
+  });
+
+  it("deduplicates tracks while filling the window", async () => {
+    const spotifyClient = {
+      findPlaylistByName: vi.fn().mockResolvedValue({ id: "playlist-rock", name: "Hard Rock" }),
+      getPlaylistItems: vi.fn().mockResolvedValue([
+        buildItem("spotify:track:a", "2026-01-01T00:00:00Z"),
+        buildItem("spotify:track:b", "2026-02-01T00:00:00Z"),
+        buildItem("spotify:track:a", "2026-03-01T00:00:00Z"),
+        buildItem("spotify:track:c", "2025-06-01T00:00:00Z"),
+      ]),
+    } as unknown as SpotifyClient;
+
+    const definitions = createPlaylistRecentDefinitions({
+      configs: [{ sourceName: "Hard Rock", windows: [3] }],
+      playlistPrefix: "",
+      playlistSuffix: "[AUTO]",
+      coverColor: "14532D",
+      logger: log,
+    });
+
+    const uris = await definitions[0].resolveTrackUrisAsync?.(spotifyClient);
+
+    expect(uris).toEqual(["spotify:track:a", "spotify:track:b", "spotify:track:c"]);
   });
 
   it("returns all tracks when the window is larger than the playlist", async () => {

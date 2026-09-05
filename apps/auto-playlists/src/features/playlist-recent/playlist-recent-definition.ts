@@ -2,7 +2,6 @@ import type { PlaylistRecentConfig } from "../../core/config.js";
 import { t } from "../../i18n/index.js";
 import type { Logger } from "../../shared/types.js";
 import type { SpotifyClient } from "../../spotify/spotify-client.js";
-import { mergePlaylistItems } from "../merged-playlists/merged-playlists-definition.js";
 import { generateRecentPlaylistCoverJpeg } from "../saved-recent/playlist-cover.js";
 import type { AutoPlaylistDefinition } from "../playlist-definitions/auto-playlist-definition.js";
 
@@ -26,7 +25,7 @@ export function createPlaylistRecentDefinitions(
         windowSize,
         options.playlistSuffix,
       ),
-      playlistDescription: `Auto-maintained last ${windowSize} tracks from playlist "${config.sourceName}".`,
+      playlistDescription: `Auto-maintained top ${windowSize} tracks from playlist "${config.sourceName}".`,
       resolveTrackUris: () => [],
       async resolveTrackUrisAsync(spotifyClient: SpotifyClient): Promise<string[]> {
         const source = await spotifyClient.findPlaylistByName(config.sourceName);
@@ -36,7 +35,19 @@ export function createPlaylistRecentDefinitions(
         }
 
         const items = await spotifyClient.getPlaylistItems(source.id);
-        return mergePlaylistItems(items).slice(0, windowSize);
+        const seen = new Set<string>();
+        const trackUris: string[] = [];
+        for (const item of items) {
+          if (seen.has(item.trackUri)) {
+            continue;
+          }
+          seen.add(item.trackUri);
+          trackUris.push(item.trackUri);
+          if (trackUris.length >= windowSize) {
+            break;
+          }
+        }
+        return trackUris;
       },
       buildCoverJpeg: () => generateRecentPlaylistCoverJpeg(windowSize, options.coverColor),
     })),
