@@ -186,7 +186,10 @@ export function getSafeConfigForLogs(cfg: AppConfig): Record<string, string | nu
     savedRecentWindows: cfg.savedRecentWindows.join(","),
     savedInYearYears: cfg.savedInYearYears.join(","),
     autoPlaylistsMergedPlaylists: cfg.autoPlaylistsMergedPlaylists
-      .map((merge) => `${merge.targetName}=${merge.sourceNames.join("+")}`)
+      .map((merge) => {
+        const prefix = merge.order === "saved" ? MERGED_SAVED_ORDER_PREFIX : "";
+        return `${prefix}${merge.targetName}=${merge.sourceNames.join("+")}`;
+      })
       .join(";"),
     autoPlaylistsRecentFromPlaylists: cfg.autoPlaylistsRecentFromPlaylists
       .map((config) => `${config.sourceName}:${config.windows.join(",")}`)
@@ -216,9 +219,27 @@ export function parseSavedInYearYears(value: string | undefined): number[] {
   });
 }
 
+export type MergedPlaylistSortOrder = "added-date" | "saved";
+
 export interface MergedPlaylistConfig {
   targetName: string;
   sourceNames: string[];
+  order: MergedPlaylistSortOrder;
+}
+
+const MERGED_SAVED_ORDER_PREFIX = "sortBySaved:";
+
+export function stripMergedSavedOrderPrefix(targetName: string): {
+  targetName: string;
+  order: MergedPlaylistSortOrder;
+} {
+  if (targetName.startsWith(MERGED_SAVED_ORDER_PREFIX)) {
+    return {
+      targetName: targetName.slice(MERGED_SAVED_ORDER_PREFIX.length).trim(),
+      order: "saved",
+    };
+  }
+  return { targetName, order: "added-date" };
 }
 
 export interface PlaylistRecentConfig {
@@ -247,7 +268,12 @@ export function parseMergedPlaylists(value: string | undefined): MergedPlaylistC
       throw new Error(`Invalid merged playlists entry "${entry}". Expected format "Target=Source1+Source2".`);
     }
 
-    const targetName = entry.slice(0, separatorIndex).trim();
+    const rawTargetName = entry.slice(0, separatorIndex).trim();
+    if (rawTargetName.length === 0) {
+      throw new Error(`Invalid merged playlists entry "${entry}": target playlist name is empty.`);
+    }
+
+    const { targetName, order } = stripMergedSavedOrderPrefix(rawTargetName);
     if (targetName.length === 0) {
       throw new Error(`Invalid merged playlists entry "${entry}": target playlist name is empty.`);
     }
@@ -273,7 +299,7 @@ export function parseMergedPlaylists(value: string | undefined): MergedPlaylistC
     }
     seenTargets.add(targetName);
 
-    result.push({ targetName, sourceNames });
+    result.push({ targetName, sourceNames, order });
   }
 
   return result;

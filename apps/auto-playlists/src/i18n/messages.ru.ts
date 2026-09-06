@@ -24,6 +24,8 @@ export const messages = {
     `Плейлист-источник "${source}" для сборного плейлиста "${target}" не найден. Он будет пропущен до следующей синхронизации.`,
   mergedPlaylistSourceFetchFailed: (target: string, source: string, message: string) =>
     `Не удалось получить треки плейлиста-источника "${source}" для сборного плейлиста "${target}": ${message}. Источник будет пропущен до следующей синхронизации.`,
+  mergedPlaylistSavedOrderFetchFailed: (message: string) =>
+    `Не удалось загрузить избранное для сборных плейлистов в режиме порядка избранного: ${message}. Затронутые сборные плейлисты будут упорядочены по датам добавления в источники до следующей синхронизации.`,
   recentFromPlaylistSourceNotFound: (source: string) =>
     `Плейлист-источник "${source}" не найден. Связанные автоплейлисты будут пропущены до следующей синхронизации.`,
   excludePlaylistNotFound: (name: string) =>

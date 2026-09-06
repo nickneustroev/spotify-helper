@@ -4,8 +4,9 @@ import {
   buildMergedPlaylistName,
   createMergedPlaylistDefinitions,
   mergePlaylistItems,
+  mergePlaylistItemsBySavedOrder,
 } from "../src/features/merged-playlists/merged-playlists-definition.js";
-import type { PlaylistItem } from "../src/shared/types.js";
+import type { PlaylistItem, SavedTrackItem } from "../src/shared/types.js";
 import type { SpotifyClient } from "../src/spotify/spotify-client.js";
 import type { Logger } from "../src/shared/types.js";
 import { initLocale } from "../src/i18n/index.js";
@@ -23,6 +24,16 @@ function buildItem(trackUri: string, addedAt: string | null): PlaylistItem {
   };
 }
 
+function buildSavedTrack(trackId: string, addedAt: string): SavedTrackItem {
+  return {
+    trackId,
+    trackUri: `spotify:track:${trackId}`,
+    trackName: trackId,
+    artistName: "Artist",
+    addedAt: new Date(addedAt),
+  };
+}
+
 describe("parseMergedPlaylists", () => {
   it("returns empty list when the variable is missing or empty", () => {
     expect(parseMergedPlaylists(undefined)).toEqual([]);
@@ -35,27 +46,58 @@ describe("parseMergedPlaylists", () => {
       {
         targetName: "Мой Мегамикс",
         sourceNames: ["RECENT 50 [AUTO]", "2024 [AUTO]"],
+        order: "added-date",
       },
     ]);
   });
 
   it("parses several entries separated by semicolons", () => {
     expect(parseMergedPlaylists("Mix=A+B;Gym=C")).toEqual([
-      { targetName: "Mix", sourceNames: ["A", "B"] },
-      { targetName: "Gym", sourceNames: ["C"] },
+      { targetName: "Mix", sourceNames: ["A", "B"], order: "added-date" },
+      { targetName: "Gym", sourceNames: ["C"], order: "added-date" },
     ]);
   });
 
   it("keeps only the first occurrence of a duplicated source", () => {
     expect(parseMergedPlaylists("Mix=A+B+A")).toEqual([
-      { targetName: "Mix", sourceNames: ["A", "B"] },
+      { targetName: "Mix", sourceNames: ["A", "B"], order: "added-date" },
     ]);
   });
 
   it("splits target from sources only at the first equals sign", () => {
     expect(parseMergedPlaylists("Weird=name with = sign")).toEqual([
-      { targetName: "Weird", sourceNames: ["name with = sign"] },
+      { targetName: "Weird", sourceNames: ["name with = sign"], order: "added-date" },
     ]);
+  });
+
+  it("parses the sortBySaved prefix into the saved order", () => {
+    expect(parseMergedPlaylists("sortBySaved:Mix=A+B")).toEqual([
+      { targetName: "Mix", sourceNames: ["A", "B"], order: "saved" },
+    ]);
+  });
+
+  it("trims the target name after the sortBySaved prefix", () => {
+    expect(parseMergedPlaylists("sortBySaved: My Mix = A+B")).toEqual([
+      { targetName: "My Mix", sourceNames: ["A", "B"], order: "saved" },
+    ]);
+  });
+
+  it("does not treat the prefix case-insensitively", () => {
+    expect(parseMergedPlaylists("SortBySaved:Mix=A")).toEqual([
+      { targetName: "SortBySaved:Mix", sourceNames: ["A"], order: "added-date" },
+    ]);
+  });
+
+  it("throws when only the sortBySaved prefix is given", () => {
+    expect(() => parseMergedPlaylists("sortBySaved:=A+B")).toThrow(
+      /target playlist name is empty/,
+    );
+  });
+
+  it("throws on duplicate targets across different orders", () => {
+    expect(() => parseMergedPlaylists("Mix=A;sortBySaved:Mix=B")).toThrow(
+      /duplicate target playlist/,
+    );
   });
 
   it("throws when an entry has no equals sign", () => {
@@ -145,7 +187,7 @@ describe("createMergedPlaylistDefinitions", () => {
 
   it("applies prefix and suffix to the target playlist name and encodes the key", () => {
     const definitions = createMergedPlaylistDefinitions({
-      merges: [{ targetName: "Мой Мегамикс", sourceNames: ["A"] }],
+      merges: [{ targetName: "Мой Мегамикс", sourceNames: ["A"], order: "added-date" }],
       playlistPrefix: "",
       playlistSuffix: "[AUTO]",
       logger: log,
@@ -176,7 +218,7 @@ describe("createMergedPlaylistDefinitions", () => {
     } as unknown as SpotifyClient;
 
     const definitions = createMergedPlaylistDefinitions({
-      merges: [{ targetName: "Mix", sourceNames: ["A", "B"] }],
+      merges: [{ targetName: "Mix", sourceNames: ["A", "B"], order: "added-date" }],
       playlistPrefix: "",
       playlistSuffix: "[AUTO]",
       logger: log,
@@ -201,7 +243,7 @@ describe("createMergedPlaylistDefinitions", () => {
     } as unknown as SpotifyClient;
 
     const definitions = createMergedPlaylistDefinitions({
-      merges: [{ targetName: "Mix", sourceNames: ["Missing", "B"] }],
+      merges: [{ targetName: "Mix", sourceNames: ["Missing", "B"], order: "added-date" }],
       playlistPrefix: "",
       playlistSuffix: "[AUTO]",
       logger: log,
@@ -222,7 +264,7 @@ describe("createMergedPlaylistDefinitions", () => {
     } as unknown as SpotifyClient;
 
     const definitions = createMergedPlaylistDefinitions({
-      merges: [{ targetName: "Mix", sourceNames: ["Missing"] }],
+      merges: [{ targetName: "Mix", sourceNames: ["Missing"], order: "added-date" }],
       playlistPrefix: "",
       playlistSuffix: "[AUTO]",
       logger: log,
@@ -247,7 +289,7 @@ describe("createMergedPlaylistDefinitions", () => {
     } as unknown as SpotifyClient;
 
     const definitions = createMergedPlaylistDefinitions({
-      merges: [{ targetName: "Mix", sourceNames: ["A", "B"] }],
+      merges: [{ targetName: "Mix", sourceNames: ["A", "B"], order: "added-date" }],
       playlistPrefix: "",
       playlistSuffix: "[AUTO]",
       logger: log,
@@ -268,7 +310,7 @@ describe("createMergedPlaylistDefinitions", () => {
     } as unknown as SpotifyClient;
 
     const definitions = createMergedPlaylistDefinitions({
-      merges: [{ targetName: "Mix", sourceNames: ["A"] }],
+      merges: [{ targetName: "Mix", sourceNames: ["A"], order: "added-date" }],
       playlistPrefix: "",
       playlistSuffix: "[AUTO]",
       logger: log,
@@ -277,5 +319,139 @@ describe("createMergedPlaylistDefinitions", () => {
     const uris = await definitions[0].resolveTrackUrisAsync?.(spotifyClient);
 
     expect(uris).toEqual([]);
+  });
+
+  it("orders tracks by saved order when the merge order is saved", async () => {
+    const spotifyClient = {
+      findPlaylistByName: vi
+        .fn()
+        .mockResolvedValueOnce({ id: "playlist-a", name: "A" })
+        .mockResolvedValueOnce({ id: "playlist-b", name: "B" }),
+      getPlaylistItems: vi
+        .fn()
+        .mockResolvedValueOnce([buildItem("spotify:track:a1", "2026-01-01T00:00:00Z")])
+        .mockResolvedValueOnce([buildItem("spotify:track:b1", "2026-02-01T00:00:00Z")]),
+    } as unknown as SpotifyClient;
+
+    const savedTracks = [
+      buildSavedTrack("b1", "2026-04-01T00:00:00Z"),
+      buildSavedTrack("a1", "2026-03-01T00:00:00Z"),
+    ];
+
+    const definitions = createMergedPlaylistDefinitions({
+      merges: [{ targetName: "Mix", sourceNames: ["A", "B"], order: "saved" }],
+      playlistPrefix: "",
+      playlistSuffix: "[AUTO]",
+      logger: log,
+    });
+
+    const uris = await definitions[0].resolveTrackUrisAsync?.(spotifyClient, savedTracks);
+
+    expect(uris).toEqual(["spotify:track:b1", "spotify:track:a1"]);
+  });
+
+  it("appends tracks missing from favorites at the end by added date", async () => {
+    const spotifyClient = {
+      findPlaylistByName: vi.fn().mockResolvedValue({ id: "playlist-a", name: "A" }),
+      getPlaylistItems: vi.fn().mockResolvedValue([
+        buildItem("spotify:track:missing", "2026-05-01T00:00:00Z"),
+        buildItem("spotify:track:a1", "2026-01-01T00:00:00Z"),
+        buildItem("spotify:track:older-missing", "2025-01-01T00:00:00Z"),
+      ]),
+    } as unknown as SpotifyClient;
+
+    const savedTracks = [buildSavedTrack("a1", "2026-03-01T00:00:00Z")];
+
+    const definitions = createMergedPlaylistDefinitions({
+      merges: [{ targetName: "Mix", sourceNames: ["A"], order: "saved" }],
+      playlistPrefix: "",
+      playlistSuffix: "[AUTO]",
+      logger: log,
+    });
+
+    const uris = await definitions[0].resolveTrackUrisAsync?.(spotifyClient, savedTracks);
+
+    expect(uris).toEqual(["spotify:track:a1", "spotify:track:missing", "spotify:track:older-missing"]);
+  });
+
+  it("falls back to the snapshot provider when sync service passes no saved tracks", async () => {
+    const spotifyClient = {
+      findPlaylistByName: vi.fn().mockResolvedValue({ id: "playlist-a", name: "A" }),
+      getPlaylistItems: vi.fn().mockResolvedValue([buildItem("spotify:track:a1", "2026-01-01T00:00:00Z")]),
+    } as unknown as SpotifyClient;
+
+    const getSavedTracks = vi.fn().mockResolvedValue([buildSavedTrack("a1", "2026-03-01T00:00:00Z")]);
+
+    const definitions = createMergedPlaylistDefinitions({
+      merges: [{ targetName: "Mix", sourceNames: ["A"], order: "saved" }],
+      playlistPrefix: "",
+      playlistSuffix: "[AUTO]",
+      logger: log,
+      getSavedTracks,
+    });
+
+    const uris = await definitions[0].resolveTrackUrisAsync?.(spotifyClient, []);
+
+    expect(uris).toEqual(["spotify:track:a1"]);
+    expect(getSavedTracks).toHaveBeenCalledTimes(1);
+  });
+
+  it("orders by added date with a warning when the favorites provider fails", async () => {
+    const spotifyClient = {
+      findPlaylistByName: vi.fn().mockResolvedValue({ id: "playlist-a", name: "A" }),
+      getPlaylistItems: vi
+        .fn()
+        .mockResolvedValue([
+          buildItem("spotify:track:a1", "2026-01-01T00:00:00Z"),
+          buildItem("spotify:track:a2", "2026-03-01T00:00:00Z"),
+        ]),
+    } as unknown as SpotifyClient;
+
+    const definitions = createMergedPlaylistDefinitions({
+      merges: [{ targetName: "Mix", sourceNames: ["A"], order: "saved" }],
+      playlistPrefix: "",
+      playlistSuffix: "[AUTO]",
+      logger: log,
+      getSavedTracks: vi.fn().mockRejectedValue(new Error("boom")),
+    });
+
+    const uris = await definitions[0].resolveTrackUrisAsync?.(spotifyClient, []);
+
+    expect(uris).toEqual(["spotify:track:a2", "spotify:track:a1"]);
+    expect(log.warn).toHaveBeenCalledWith(
+      "Failed to load saved tracks for saved-order merged playlists: boom. Affected merged playlists will be ordered by source added dates until the next sync.",
+    );
+  });
+});
+
+describe("mergePlaylistItemsBySavedOrder", () => {
+  it("follows the favorites order and deduplicates across sources", () => {
+    const items = [
+      buildItem("spotify:track:c1", "2026-01-01T00:00:00Z"),
+      buildItem("spotify:track:a1", "2026-02-01T00:00:00Z"),
+      buildItem("spotify:track:b1", "2026-03-01T00:00:00Z"),
+      buildItem("spotify:track:a1", "2026-04-01T00:00:00Z"),
+    ];
+    const savedTracks = [
+      buildSavedTrack("b1", "2026-05-01T00:00:00Z"),
+      buildSavedTrack("a1", "2026-05-02T00:00:00Z"),
+      buildSavedTrack("c1", "2026-05-03T00:00:00Z"),
+    ];
+
+    expect(mergePlaylistItemsBySavedOrder(items, savedTracks)).toEqual([
+      "spotify:track:b1",
+      "spotify:track:a1",
+      "spotify:track:c1",
+    ]);
+  });
+
+  it("keeps favorites that are not part of the sources out of the result", () => {
+    const items = [buildItem("spotify:track:a1", "2026-01-01T00:00:00Z")];
+    const savedTracks = [
+      buildSavedTrack("x9", "2026-05-01T00:00:00Z"),
+      buildSavedTrack("a1", "2026-05-02T00:00:00Z"),
+    ];
+
+    expect(mergePlaylistItemsBySavedOrder(items, savedTracks)).toEqual(["spotify:track:a1"]);
   });
 });

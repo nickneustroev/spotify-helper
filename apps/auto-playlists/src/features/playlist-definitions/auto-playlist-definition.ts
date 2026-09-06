@@ -6,6 +6,9 @@ export interface AutoPlaylistDefinition {
   playlistName: string;
   playlistDescription: string;
   resolveTrackUris(savedTracks: SavedTrackItem[]): string[];
-  resolveTrackUrisAsync?(spotifyClient: SpotifyClient): Promise<string[]>;
+  resolveTrackUrisAsync?(
+    spotifyClient: SpotifyClient,
+    savedTracks?: SavedTrackItem[],
+  ): Promise<string[]>;
   buildCoverJpeg?(): Promise<Buffer>;
 }

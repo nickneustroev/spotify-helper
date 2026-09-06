@@ -36,6 +36,7 @@ interface SavedTrackSnapshotItem {
 }
 
 const SAVED_TRACKS_SNAPSHOT_KEY = "auto_playlists:saved_tracks_snapshot";
+const SAVED_TRACKS_SNAPSHOT_UPDATED_AT_KEY = "auto_playlists:saved_tracks_snapshot:updated_at";
 const PLAYLIST_ID_KEY_PREFIX = "auto_playlists:playlist_id:";
 
 export class AutoPlaylistsSyncService {
@@ -141,7 +142,7 @@ export class AutoPlaylistsSyncService {
           let trackUris: string[];
           if (definition.resolveTrackUrisAsync) {
             try {
-              trackUris = await definition.resolveTrackUrisAsync(this.spotifyClient);
+              trackUris = await definition.resolveTrackUrisAsync(this.spotifyClient, savedTracks);
             } catch (error) {
               this.logger.warn(
                 t("playlistTrackResolveFailed", definition.playlistName, (error as Error).message),
@@ -354,6 +355,10 @@ export class AutoPlaylistsSyncService {
     );
 
     await this.appStateRepository.setValue(SAVED_TRACKS_SNAPSHOT_KEY, payload);
+    await this.appStateRepository.setValue(
+      SAVED_TRACKS_SNAPSHOT_UPDATED_AT_KEY,
+      new Date().toISOString(),
+    );
   }
 
   private async readPlaylistId(definitionKey: string): Promise<string | null> {
@@ -431,6 +436,45 @@ export class AutoPlaylistsSyncService {
 
 export function hashTrackUris(trackUris: string[]): string {
   return `${trackUris.length}:${trackUris.join("|")}`;
+}
+
+export async function readFreshSavedTracksSnapshot(
+  appStateRepository: AppStateRepository,
+  maxAgeMs: number,
+): Promise<SavedTrackItem[] | null> {
+  const [raw, rawUpdatedAt] = await Promise.all([
+    appStateRepository.getValue(SAVED_TRACKS_SNAPSHOT_KEY),
+    appStateRepository.getValue(SAVED_TRACKS_SNAPSHOT_UPDATED_AT_KEY),
+  ]);
+  if (!raw || !rawUpdatedAt) {
+    return null;
+  }
+
+  const updatedAt = new Date(rawUpdatedAt);
+  if (Number.isNaN(updatedAt.getTime()) || Date.now() - updatedAt.getTime() > maxAgeMs) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as SavedTrackSnapshotItem[];
+    const tracks = parsed
+      .map((item) => ({
+        trackId: item.trackId,
+        trackUri: item.trackUri,
+        trackName: item.trackName,
+        artistName: item.artistName,
+        addedAt: new Date(item.addedAtIso),
+      }))
+      .filter((item) => !Number.isNaN(item.addedAt.getTime()));
+
+    if (tracks.length === 0) {
+      return null;
+    }
+
+    return tracks.sort((left, right) => right.addedAt.getTime() - left.addedAt.getTime());
+  } catch {
+    return null;
+  }
 }
 
 async function defaultRunExclusive<T>(_modeName: string, run: () => Promise<T>): Promise<T> {

@@ -89,8 +89,8 @@ describe("auto-playlists config parsers", () => {
 
   it("parses merged playlists configuration", () => {
     expect(parseMergedPlaylists("Mix=A+B;Gym=C")).toEqual([
-      { targetName: "Mix", sourceNames: ["A", "B"] },
-      { targetName: "Gym", sourceNames: ["C"] },
+      { targetName: "Mix", sourceNames: ["A", "B"], order: "added-date" },
+      { targetName: "Gym", sourceNames: ["C"], order: "added-date" },
     ]);
   });
 
@@ -102,7 +102,7 @@ describe("auto-playlists config parsers", () => {
     const config = loadConfig();
 
     expect(config.autoPlaylistsMergedPlaylists).toEqual([
-      { targetName: "Mix", sourceNames: ["A", "B"] },
+      { targetName: "Mix", sourceNames: ["A", "B"], order: "added-date" },
     ]);
   });
 
@@ -291,7 +291,8 @@ describe("auto-playlists config parsers", () => {
     process.env.SPOTIFY_CLIENT_SECRET = "test-client-secret";
     process.env.DATABASE_URL = "postgres://user:secret-password@db.example.com:5432/app";
     process.env.SPOTIFY_PROXY_URL = "http://proxy-user:proxy-password@proxy.example.com:8000";
-    process.env.AUTO_PLAYLISTS_MERGED_PLAYLISTS = "BEST ALL=My Action Rock+My Groove Metal";
+    process.env.AUTO_PLAYLISTS_MERGED_PLAYLISTS =
+      "BEST ALL=My Action Rock+My Groove Metal;sortBySaved:CHILL=My Dance Music";
     process.env.AUTO_PLAYLISTS_RECENT_FROM_PLAYLISTS = "Hard Rock:50,100;Gym:30";
     process.env.EXCLUDE_PLAYLIST_TITLE = "Not Now";
 
@@ -301,7 +302,9 @@ describe("auto-playlists config parsers", () => {
     expect(safeConfig.databaseConfigured).toBe(true);
     expect(safeConfig.spotifyProxyConfigured).toBe(true);
     expect(safeConfig.appLocale).toBe("EN");
-    expect(safeConfig.autoPlaylistsMergedPlaylists).toBe("BEST ALL=My Action Rock+My Groove Metal");
+    expect(safeConfig.autoPlaylistsMergedPlaylists).toBe(
+      "BEST ALL=My Action Rock+My Groove Metal;sortBySaved:CHILL=My Dance Music",
+    );
     expect(safeConfig.autoPlaylistsRecentFromPlaylists).toBe("Hard Rock:50,100;Gym:30");
     expect(safeConfig.excludePlaylistTitle).toBe("Not Now");
     expect(serialized).not.toContain("secret-password");

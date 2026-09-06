@@ -24,6 +24,8 @@ export const messages = {
     `Source playlist "${source}" for merged playlist "${target}" was not found. It will be skipped until the next sync.`,
   mergedPlaylistSourceFetchFailed: (target: string, source: string, message: string) =>
     `Failed to fetch tracks of source playlist "${source}" for merged playlist "${target}": ${message}. The source will be skipped until the next sync.`,
+  mergedPlaylistSavedOrderFetchFailed: (message: string) =>
+    `Failed to load saved tracks for saved-order merged playlists: ${message}. Affected merged playlists will be ordered by source added dates until the next sync.`,
   recentFromPlaylistSourceNotFound: (source: string) =>
     `Source playlist "${source}" was not found. Related auto playlists will be skipped until the next sync.`,
   excludePlaylistNotFound: (name: string) =>

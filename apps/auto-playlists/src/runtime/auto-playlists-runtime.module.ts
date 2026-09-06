@@ -17,7 +17,7 @@ import {
   SPOTIFY_CLIENT,
   TRACK_WATCHER,
 } from "../core/nest.tokens.js";
-import { AutoPlaylistsSyncService } from "../features/playlist-definitions/auto-playlists-sync-service.js";
+import { AutoPlaylistsSyncService, readFreshSavedTracksSnapshot } from "../features/playlist-definitions/auto-playlists-sync-service.js";
 import { SavedTracksSource } from "../features/playlist-definitions/saved-tracks-source.js";
 import { createMergedPlaylistDefinitions } from "../features/merged-playlists/merged-playlists-definition.js";
 import { createPlaylistRecentDefinitions } from "../features/playlist-recent/playlist-recent-definition.js";
@@ -220,11 +220,22 @@ import { TrackWatcher } from "./track-watcher.js";
         runExclusive: SyncRunner,
         databaseFeatures: DatabaseFeatures,
       ) => {
+        const savedTracksSource = new SavedTracksSource(spotifyClient);
         const mergedDefinitions = createMergedPlaylistDefinitions({
           merges: cfg.autoPlaylistsMergedPlaylists,
           playlistPrefix: cfg.autoPlaylistsPlaylistPrefix,
           playlistSuffix: cfg.autoPlaylistsPlaylistSuffix,
           logger: log,
+          getSavedTracks: async () => {
+            const snapshot = await readFreshSavedTracksSnapshot(
+              appStateRepository,
+              cfg.autoPlaylistsRareSyncIntervalMs * 2,
+            );
+            if (snapshot) {
+              return snapshot;
+            }
+            return savedTracksSource.getAllSavedTracks();
+          },
         });
         const recentDefinitions = createPlaylistRecentDefinitions({
           configs: cfg.autoPlaylistsRecentFromPlaylists,
@@ -239,7 +250,7 @@ import { TrackWatcher } from "./track-watcher.js";
         return definitions.length > 0
           ? new AutoPlaylistsSyncService(
               spotifyClient,
-              new SavedTracksSource(spotifyClient),
+              savedTracksSource,
               archiveRepository,
               appStateRepository,
               log,
