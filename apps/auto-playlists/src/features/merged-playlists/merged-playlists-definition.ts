@@ -60,30 +60,37 @@ export function buildMergedPlaylistName(prefix: string, suffix: string, targetNa
 }
 
 export function mergePlaylistItems(items: PlaylistItem[]): string[] {
-  const sorted = items
-    .map((item, index) => ({ item, index }))
-    .sort((left, right) => {
-      if (!left.item.addedAt && !right.item.addedAt) {
-        return left.index - right.index;
-      }
-      if (!left.item.addedAt) {
-        return 1;
-      }
-      if (!right.item.addedAt) {
-        return -1;
-      }
-      return right.item.addedAt.getTime() - left.item.addedAt.getTime() || left.index - right.index;
-    });
-
-  const seenUris = new Set<string>();
-  const trackUris: string[] = [];
-  for (const { item } of sorted) {
-    if (seenUris.has(item.trackUri)) {
-      continue;
+  const earliestByUri = new Map<string, { item: PlaylistItem; index: number }>();
+  for (const [index, item] of items.entries()) {
+    const existing = earliestByUri.get(item.trackUri);
+    if (!existing || isEarlierAddition(item, existing.item)) {
+      earliestByUri.set(item.trackUri, { item, index });
     }
-    seenUris.add(item.trackUri);
-    trackUris.push(item.trackUri);
   }
 
-  return trackUris;
+  const merged = Array.from(earliestByUri.values());
+  merged.sort((left, right) => {
+    if (!left.item.addedAt && !right.item.addedAt) {
+      return left.index - right.index;
+    }
+    if (!left.item.addedAt) {
+      return 1;
+    }
+    if (!right.item.addedAt) {
+      return -1;
+    }
+    return right.item.addedAt.getTime() - left.item.addedAt.getTime() || left.index - right.index;
+  });
+
+  return merged.map((entry) => entry.item.trackUri);
+}
+
+function isEarlierAddition(candidate: PlaylistItem, current: PlaylistItem): boolean {
+  if (!candidate.addedAt) {
+    return false;
+  }
+  if (!current.addedAt) {
+    return true;
+  }
+  return candidate.addedAt.getTime() < current.addedAt.getTime();
 }

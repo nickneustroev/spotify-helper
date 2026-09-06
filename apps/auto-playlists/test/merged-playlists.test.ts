@@ -94,6 +94,28 @@ describe("mergePlaylistItems", () => {
     expect(uris).toEqual(["spotify:track:b", "spotify:track:a"]);
   });
 
+  it("positions a duplicated track by its earliest addition date", () => {
+    const uris = mergePlaylistItems([
+      buildItem("spotify:track:a", "2026-01-01T00:00:00Z"),
+      buildItem("spotify:track:b", "2026-03-01T00:00:00Z"),
+      buildItem("spotify:track:c", "2020-06-01T00:00:00Z"),
+      buildItem("spotify:track:c", "2026-05-01T00:00:00Z"),
+    ]);
+
+    expect(uris).toEqual(["spotify:track:b", "spotify:track:a", "spotify:track:c"]);
+  });
+
+  it("treats a duplicate with unknown date as later than the dated copy", () => {
+    const uris = mergePlaylistItems([
+      buildItem("spotify:track:a", null),
+      buildItem("spotify:track:b", "2026-03-01T00:00:00Z"),
+      buildItem("spotify:track:a", "2020-01-01T00:00:00Z"),
+      buildItem("spotify:track:e", "2015-01-01T00:00:00Z"),
+    ]);
+
+    expect(uris).toEqual(["spotify:track:b", "spotify:track:a", "spotify:track:e"]);
+  });
+
   it("keeps items with unknown added date at the end", () => {
     const uris = mergePlaylistItems([
       buildItem("spotify:track:no-date", null),
