@@ -26,6 +26,12 @@ export const messages = {
     `Не удалось получить треки плейлиста-источника "${source}" для сборного плейлиста "${target}": ${message}. Источник будет пропущен до следующей синхронизации.`,
   recentFromPlaylistSourceNotFound: (source: string) =>
     `Плейлист-источник "${source}" не найден. Связанные автоплейлисты будут пропущены до следующей синхронизации.`,
+  excludePlaylistNotFound: (name: string) =>
+    `Плейлист исключений "${name}" не найден. Исключение треков пропущено до следующей синхронизации.`,
+  excludePlaylistLookupFailed: (name: string, message: string) =>
+    `Не удалось найти плейлист исключений "${name}": ${message}. Исключение треков пропущено до следующей синхронизации.`,
+  excludePlaylistFetchFailed: (name: string, message: string) =>
+    `Не удалось получить треки плейлиста исключений "${name}": ${message}. Исключение треков пропущено до следующей синхронизации.`,
   playlistTrackResolveFailed: (name: string, message: string) =>
     `Не удалось получить треки для плейлиста "${name}": ${message}`,
   noPlaylistDefinitionsConfigured: "Автоплейлисты не настроены.",

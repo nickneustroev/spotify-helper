@@ -5,6 +5,7 @@ import type { Logger } from "../../shared/types.js";
 import type { SpotifyClient } from "../../spotify/spotify-client.js";
 import { t } from "../../i18n/index.js";
 import type { AutoPlaylistDefinition } from "./auto-playlist-definition.js";
+import { fetchExcludedTrackIds } from "../exclude-playlist/exclude-playlist.js";
 import {
   filterSavedTracks,
   type SavedTracksFetchRequirements,
@@ -22,6 +23,7 @@ export interface AutoPlaylistsSyncOptions {
   isDatabasePersistenceEnabled?: () => boolean;
   savedTracksRequirements?: SavedTracksFetchRequirements;
   fetchSavedTracks?: boolean;
+  excludePlaylistName?: string;
   runExclusive?: <T>(modeName: string, run: () => Promise<T>) => Promise<T>;
 }
 
@@ -113,10 +115,12 @@ export class AutoPlaylistsSyncService {
         await this.ensurePlaylists();
         const fetchSavedTracks = this.options.fetchSavedTracks ?? true;
         const databasePersistenceEnabled = this.options.isDatabasePersistenceEnabled?.() ?? true;
+        const excludeTrackIds = await this.resolveExcludedTrackIds();
         const savedTracks = fetchSavedTracks
-          ? await this.savedTracksSource.getSavedTracks(
-              this.resolveSavedTracksRequirements(databasePersistenceEnabled),
-            )
+          ? await this.savedTracksSource.getSavedTracks({
+              ...this.resolveSavedTracksRequirements(databasePersistenceEnabled),
+              excludeTrackIds,
+            })
           : [];
 
         if (
@@ -266,6 +270,15 @@ export class AutoPlaylistsSyncService {
     }
 
     return this.options.savedTracksRequirements;
+  }
+
+  private async resolveExcludedTrackIds(): Promise<Set<string>> {
+    const excludePlaylistName = this.options.excludePlaylistName;
+    if (!excludePlaylistName || excludePlaylistName.trim().length === 0) {
+      return new Set();
+    }
+
+    return fetchExcludedTrackIds(this.spotifyClient, excludePlaylistName, this.logger);
   }
 
   private async syncRemovedTracksArchive(currentSavedTracks: SavedTrackItem[]): Promise<void> {

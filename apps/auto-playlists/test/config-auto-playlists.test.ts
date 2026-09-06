@@ -29,6 +29,7 @@ const ENV_KEYS = [
   "SAVED_IN_YEAR_YEARS",
   "AUTO_PLAYLISTS_MERGED_PLAYLISTS",
   "AUTO_PLAYLISTS_RECENT_FROM_PLAYLISTS",
+  "EXCLUDE_PLAYLIST_TITLE",
   "SPOTIFY_PROXY_URL",
   "APP_LOCALE",
 ] as const;
@@ -145,6 +146,7 @@ describe("auto-playlists config parsers", () => {
     process.env.RECENT_FROM_PLAYLISTS_COVER_COLOR = "";
     process.env.AUTO_PLAYLISTS_MERGED_PLAYLISTS = "";
     process.env.AUTO_PLAYLISTS_RECENT_FROM_PLAYLISTS = " ";
+    process.env.EXCLUDE_PLAYLIST_TITLE = " ";
     process.env.SPOTIFY_PROXY_URL = " ";
     process.env.APP_LOCALE = "";
 
@@ -165,8 +167,17 @@ describe("auto-playlists config parsers", () => {
     expect(config.recentFromPlaylistsCoverColor).toBe("#14532D");
     expect(config.autoPlaylistsMergedPlaylists).toEqual([]);
     expect(config.autoPlaylistsRecentFromPlaylists).toEqual([]);
+    expect(config.excludePlaylistTitle).toBe("");
     expect(config.spotifyProxyUrl).toBe("");
     expect(config.appLocale).toBe("EN");
+  });
+
+  it("loads exclude playlist title from env", () => {
+    process.env.SPOTIFY_CLIENT_ID = "test-client-id";
+    process.env.SPOTIFY_CLIENT_SECRET = "test-client-secret";
+    process.env.EXCLUDE_PLAYLIST_TITLE = " Not Now ";
+
+    expect(loadConfig().excludePlaylistTitle).toBe("Not Now");
   });
 
   it("uses default suffix when suffix is missing or empty", () => {
@@ -282,6 +293,7 @@ describe("auto-playlists config parsers", () => {
     process.env.SPOTIFY_PROXY_URL = "http://proxy-user:proxy-password@proxy.example.com:8000";
     process.env.AUTO_PLAYLISTS_MERGED_PLAYLISTS = "BEST ALL=My Action Rock+My Groove Metal";
     process.env.AUTO_PLAYLISTS_RECENT_FROM_PLAYLISTS = "Hard Rock:50,100;Gym:30";
+    process.env.EXCLUDE_PLAYLIST_TITLE = "Not Now";
 
     const safeConfig = getSafeConfigForLogs(loadConfig());
     const serialized = JSON.stringify(safeConfig);
@@ -291,6 +303,7 @@ describe("auto-playlists config parsers", () => {
     expect(safeConfig.appLocale).toBe("EN");
     expect(safeConfig.autoPlaylistsMergedPlaylists).toBe("BEST ALL=My Action Rock+My Groove Metal");
     expect(safeConfig.autoPlaylistsRecentFromPlaylists).toBe("Hard Rock:50,100;Gym:30");
+    expect(safeConfig.excludePlaylistTitle).toBe("Not Now");
     expect(serialized).not.toContain("secret-password");
     expect(serialized).not.toContain("proxy-password");
     expect(serialized).not.toContain("db.example.com");

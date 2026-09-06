@@ -4,6 +4,7 @@ import type { SpotifyClient } from "../../spotify/spotify-client.js";
 export interface SavedTracksFetchRequirements {
   maxRecentTracks?: number;
   minSavedYear?: number;
+  excludeTrackIds?: Set<string>;
 }
 
 export class SavedTracksSource {
@@ -20,7 +21,7 @@ export class SavedTracksSource {
 
     const maxRecentTracks = Math.max(0, requirements.maxRecentTracks ?? 0);
     if (maxRecentTracks > 0) {
-      return this.getRecentSavedTracks(maxRecentTracks);
+      return this.getRecentSavedTracks(maxRecentTracks, requirements.excludeTrackIds);
     }
 
     return this.getAllSavedTracks();
@@ -59,7 +60,10 @@ export class SavedTracksSource {
     return lastCollectedTracks.sort((left, right) => right.addedAt.getTime() - left.addedAt.getTime());
   }
 
-  public async getRecentSavedTracks(limit: number): Promise<SavedTrackItem[]> {
+  public async getRecentSavedTracks(
+    limit: number,
+    excludeTrackIds: ReadonlySet<string> = new Set<string>(),
+  ): Promise<SavedTrackItem[]> {
     if (limit <= 0) {
       return [];
     }
@@ -67,7 +71,7 @@ export class SavedTracksSource {
     const collectedTracks: SavedTrackItem[] = [];
     let offset = 0;
 
-    while (collectedTracks.length < limit) {
+    while (countNotExcluded(collectedTracks, excludeTrackIds) < limit) {
       const page = await this.spotifyClient.getSavedTracksPage(this.pageSize, offset);
       if (page.tracks.length === 0) {
         break;
@@ -82,6 +86,7 @@ export class SavedTracksSource {
     }
 
     return dedupeSavedTracks(collectedTracks)
+      .filter((track) => !excludeTrackIds.has(track.trackId))
       .sort((left, right) => right.addedAt.getTime() - left.addedAt.getTime())
       .slice(0, limit);
   }
@@ -188,4 +193,14 @@ function isStableFirstPage(
 
 function hasTracksBeforeYear(tracks: SavedTrackItem[], minSavedYear: number): boolean {
   return tracks.some((track) => track.addedAt.getUTCFullYear() < minSavedYear);
+}
+
+function countNotExcluded(
+  tracks: SavedTrackItem[],
+  excludeTrackIds: ReadonlySet<string>,
+): number {
+  if (excludeTrackIds.size === 0) {
+    return tracks.length;
+  }
+  return tracks.filter((track) => !excludeTrackIds.has(track.trackId)).length;
 }

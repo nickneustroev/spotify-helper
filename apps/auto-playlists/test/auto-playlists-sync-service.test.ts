@@ -254,7 +254,10 @@ describe("AutoPlaylistsSyncService", () => {
     await service.syncNow();
 
     expect(localArchive.upsertArchivedTrack).not.toHaveBeenCalled();
-    expect(savedTracksSource.getSavedTracks).toHaveBeenCalledWith({ minSavedYear: 2024 });
+    expect(savedTracksSource.getSavedTracks).toHaveBeenCalledWith({
+      minSavedYear: 2024,
+      excludeTrackIds: new Set(),
+    });
     expect(localAppState.setValue).toHaveBeenCalledTimes(1);
     expect(localAppState.setValue).toHaveBeenCalledWith("auto_playlists:playlist_id:saved-recent:2", "p2");
   });
@@ -301,7 +304,7 @@ describe("AutoPlaylistsSyncService", () => {
     (service as unknown as { stopped: boolean }).stopped = false;
     await service.syncNow();
 
-    expect(savedTracksSource.getSavedTracks).toHaveBeenCalledWith(undefined);
+    expect(savedTracksSource.getSavedTracks).toHaveBeenCalledWith({ excludeTrackIds: new Set() });
   });
 
   it("hashes uri arrays deterministically", () => {
@@ -761,7 +764,7 @@ describe("AutoPlaylistsSyncService", () => {
     (service as unknown as { stopped: boolean }).stopped = false;
     await service.syncNow();
 
-    expect(getSavedTracks).toHaveBeenCalledWith({ maxRecentTracks: 2 });
+    expect(getSavedTracks).toHaveBeenCalledWith({ maxRecentTracks: 2, excludeTrackIds: new Set() });
   });
 
   it("resolves track uris asynchronously and skips saved tracks fetch when disabled", async () => {

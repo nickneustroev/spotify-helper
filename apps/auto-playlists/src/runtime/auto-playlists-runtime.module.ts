@@ -137,6 +137,7 @@ import { TrackWatcher } from "./track-watcher.js";
             runExclusive,
             syncRemovedTracksArchive: false,
             isDatabasePersistenceEnabled: () => databaseFeatures.isPersistenceEnabled(),
+            excludePlaylistName: cfg.excludePlaylistTitle,
             savedTracksRequirements: {
               maxRecentTracks,
             },
@@ -230,6 +231,7 @@ import { TrackWatcher } from "./track-watcher.js";
           playlistPrefix: cfg.autoPlaylistsPlaylistPrefix,
           playlistSuffix: cfg.autoPlaylistsPlaylistSuffix,
           coverColor: cfg.recentFromPlaylistsCoverColor,
+          excludePlaylistName: cfg.excludePlaylistTitle,
           logger: log,
         });
         const definitions = [...mergedDefinitions, ...recentDefinitions];

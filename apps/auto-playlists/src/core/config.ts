@@ -72,6 +72,7 @@ const schema = z.object({
   SAVED_IN_YEAR_YEARS: savedInYearYearsSchema,
   AUTO_PLAYLISTS_MERGED_PLAYLISTS: mergedPlaylistsSchema,
   AUTO_PLAYLISTS_RECENT_FROM_PLAYLISTS: recentFromPlaylistsSchema,
+  EXCLUDE_PLAYLIST_TITLE: optionalEnv(z.string().trim()).default(""),
   SPOTIFY_PROXY_URL: optionalEnv(z.string()).default(""),
   APP_LOCALE: optionalEnv(z.enum(["EN", "RU"])).default(DEFAULT_APP_LOCALE),
 });
@@ -97,6 +98,7 @@ export interface AppConfig {
   savedInYearYears: number[];
   autoPlaylistsMergedPlaylists: MergedPlaylistConfig[];
   autoPlaylistsRecentFromPlaylists: PlaylistRecentConfig[];
+  excludePlaylistTitle: string;
   spotifyProxyUrl: string;
   appLocale: "EN" | "RU";
 }
@@ -136,6 +138,7 @@ export function loadConfig(): AppConfig {
     savedInYearYears: env.SAVED_IN_YEAR_YEARS,
     autoPlaylistsMergedPlaylists: env.AUTO_PLAYLISTS_MERGED_PLAYLISTS,
     autoPlaylistsRecentFromPlaylists: env.AUTO_PLAYLISTS_RECENT_FROM_PLAYLISTS,
+    excludePlaylistTitle: env.EXCLUDE_PLAYLIST_TITLE,
     spotifyProxyUrl: env.SPOTIFY_PROXY_URL,
     appLocale: env.APP_LOCALE,
   };
@@ -188,6 +191,7 @@ export function getSafeConfigForLogs(cfg: AppConfig): Record<string, string | nu
     autoPlaylistsRecentFromPlaylists: cfg.autoPlaylistsRecentFromPlaylists
       .map((config) => `${config.sourceName}:${config.windows.join(",")}`)
       .join(";"),
+    excludePlaylistTitle: cfg.excludePlaylistTitle,
     spotifyProxyConfigured: cfg.spotifyProxyUrl.length > 0,
     appLocale: cfg.appLocale,
   };

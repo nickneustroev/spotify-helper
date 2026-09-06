@@ -198,6 +198,44 @@ describe("createPlaylistRecentDefinitions", () => {
     expect(uris).toEqual(["spotify:track:a", "spotify:track:b", "spotify:track:c"]);
   });
 
+  it("skips excluded tracks while filling the window", async () => {
+    const spotifyClient = {
+      findPlaylistByName: vi
+        .fn()
+        .mockResolvedValueOnce({ id: "playlist-exclude", name: "Excluded" })
+        .mockResolvedValueOnce({ id: "playlist-rock", name: "Hard Rock" }),
+      getPlaylistItems: vi
+        .fn()
+        .mockResolvedValueOnce([
+          buildItem("spotify:track:excluded1", "2026-01-01T00:00:00Z"),
+          buildItem("spotify:track:excluded2", "2026-02-01T00:00:00Z"),
+        ])
+        .mockResolvedValueOnce([
+          buildItem("spotify:track:first", "2026-03-01T00:00:00Z"),
+          buildItem("spotify:track:excluded1", "2026-04-01T00:00:00Z"),
+          buildItem("spotify:track:second", "2026-05-01T00:00:00Z"),
+          buildItem("spotify:track:third", "2026-06-01T00:00:00Z"),
+        ]),
+    } as unknown as SpotifyClient;
+
+    const definitions = createPlaylistRecentDefinitions({
+      configs: [{ sourceName: "Hard Rock", windows: [3] }],
+      playlistPrefix: "",
+      playlistSuffix: "[AUTO]",
+      coverColor: "14532D",
+      excludePlaylistName: "Excluded",
+      logger: log,
+    });
+
+    const uris = await definitions[0].resolveTrackUrisAsync?.(spotifyClient);
+
+    expect(uris).toEqual([
+      "spotify:track:first",
+      "spotify:track:second",
+      "spotify:track:third",
+    ]);
+  });
+
   it("returns all tracks when the window is larger than the playlist", async () => {
     const spotifyClient = {
       findPlaylistByName: vi.fn().mockResolvedValue({ id: "playlist-rock", name: "Hard Rock" }),

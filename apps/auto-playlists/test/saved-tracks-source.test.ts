@@ -130,6 +130,62 @@ describe("SavedTracksSource", () => {
     expect(getSavedTracksPage).toHaveBeenNthCalledWith(2, 2, 2);
   });
 
+  it("scans deeper when recent tracks are excluded", async () => {
+    const getSavedTracksPage = vi
+      .fn()
+      .mockResolvedValueOnce({
+        tracks: [
+          buildSavedTrack("a", "2024-05-01T10:00:00.000Z"),
+          buildSavedTrack("b", "2024-04-01T10:00:00.000Z"),
+        ],
+        total: 6,
+      })
+      .mockResolvedValueOnce({
+        tracks: [
+          buildSavedTrack("c", "2024-03-01T10:00:00.000Z"),
+          buildSavedTrack("d", "2024-02-01T10:00:00.000Z"),
+        ],
+        total: 6,
+      })
+      .mockResolvedValueOnce({
+        tracks: [
+          buildSavedTrack("e", "2024-01-01T10:00:00.000Z"),
+          buildSavedTrack("f", "2023-12-01T10:00:00.000Z"),
+        ],
+        total: 6,
+      });
+
+    const source = new SavedTracksSource({ getSavedTracksPage } as unknown as SpotifyClient, 2);
+    const tracks = await source.getSavedTracks({
+      maxRecentTracks: 3,
+      excludeTrackIds: new Set(["b", "d"]),
+    });
+
+    expect(tracks.map((track) => track.trackId)).toEqual(["a", "c", "e"]);
+    expect(getSavedTracksPage).toHaveBeenCalledTimes(3);
+  });
+
+  it("returns fewer tracks than the limit when everything remaining is excluded", async () => {
+    const getSavedTracksPage = vi
+      .fn()
+      .mockResolvedValueOnce({
+        tracks: [
+          buildSavedTrack("a", "2024-05-01T10:00:00.000Z"),
+          buildSavedTrack("b", "2024-04-01T10:00:00.000Z"),
+        ],
+        total: 2,
+      });
+
+    const source = new SavedTracksSource({ getSavedTracksPage } as unknown as SpotifyClient, 2);
+    const tracks = await source.getSavedTracks({
+      maxRecentTracks: 5,
+      excludeTrackIds: new Set(["a"]),
+    });
+
+    expect(tracks.map((track) => track.trackId)).toEqual(["b"]);
+    expect(getSavedTracksPage).toHaveBeenCalledTimes(1);
+  });
+
   it("stops scanning saved tracks after reaching tracks older than the minimum year", async () => {
     const getSavedTracksPage = vi
       .fn()

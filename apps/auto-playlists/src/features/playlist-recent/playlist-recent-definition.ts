@@ -2,6 +2,7 @@ import type { PlaylistRecentConfig } from "../../core/config.js";
 import { t } from "../../i18n/index.js";
 import type { Logger } from "../../shared/types.js";
 import type { SpotifyClient } from "../../spotify/spotify-client.js";
+import { fetchExcludedTrackIds, extractTrackId } from "../exclude-playlist/exclude-playlist.js";
 import { generateRecentPlaylistCoverJpeg } from "../saved-recent/playlist-cover.js";
 import type { AutoPlaylistDefinition } from "../playlist-definitions/auto-playlist-definition.js";
 
@@ -10,6 +11,7 @@ export interface PlaylistRecentDefinitionsOptions {
   playlistPrefix: string;
   playlistSuffix: string;
   coverColor: string;
+  excludePlaylistName?: string;
   logger: Logger;
 }
 
@@ -34,6 +36,12 @@ export function createPlaylistRecentDefinitions(
           return [];
         }
 
+        const excludedTrackIds = await fetchExcludedTrackIds(
+          spotifyClient,
+          options.excludePlaylistName ?? "",
+          options.logger,
+        );
+
         const items = await spotifyClient.getPlaylistItems(source.id);
         const seen = new Set<string>();
         const trackUris: string[] = [];
@@ -42,6 +50,12 @@ export function createPlaylistRecentDefinitions(
             continue;
           }
           seen.add(item.trackUri);
+
+          const trackId = extractTrackId(item.trackUri);
+          if (trackId !== null && excludedTrackIds.has(trackId)) {
+            continue;
+          }
+
           trackUris.push(item.trackUri);
           if (trackUris.length >= windowSize) {
             break;

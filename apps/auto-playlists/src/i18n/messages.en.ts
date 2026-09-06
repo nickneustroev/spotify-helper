@@ -26,6 +26,12 @@ export const messages = {
     `Failed to fetch tracks of source playlist "${source}" for merged playlist "${target}": ${message}. The source will be skipped until the next sync.`,
   recentFromPlaylistSourceNotFound: (source: string) =>
     `Source playlist "${source}" was not found. Related auto playlists will be skipped until the next sync.`,
+  excludePlaylistNotFound: (name: string) =>
+    `Exclude playlist "${name}" was not found. Track exclusions are skipped until the next sync.`,
+  excludePlaylistLookupFailed: (name: string, message: string) =>
+    `Failed to look up exclude playlist "${name}": ${message}. Track exclusions are skipped until the next sync.`,
+  excludePlaylistFetchFailed: (name: string, message: string) =>
+    `Failed to fetch tracks of exclude playlist "${name}": ${message}. Track exclusions are skipped until the next sync.`,
   playlistTrackResolveFailed: (name: string, message: string) =>
     `Failed to resolve tracks for playlist "${name}": ${message}`,
   noPlaylistDefinitionsConfigured: "Auto playlists are not configured.",
