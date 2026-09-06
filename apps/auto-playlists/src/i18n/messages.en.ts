@@ -11,6 +11,8 @@ export const messages = {
   trackMonitoringDisabled: "Track monitoring is disabled (TRACK_MONITORING_ENABLED=false).",
   spotifyRateLimitedBackingOff: (delayMs: number) =>
     `Spotify rate limited requests. Backing off for ${delayMs}ms before next poll.`,
+  spotifyRateLimitLongBan: (retryAfterSeconds: number, resumeAtIso: string) =>
+    `Spotify rate limit hit with a long Retry-After (${retryAfterSeconds}s). Requests are paused until ${resumeAtIso}.`,
   pollingFailed: (message: string, delayMs: number) =>
     `Polling failed: ${message}. Next attempt in ${delayMs}ms.`,
 
@@ -45,8 +47,8 @@ export const messages = {
     `Playlist "${name}" is no longer available. Cached id dropped, will recreate on next sync.`,
   playlistUpdated: (name: string) => `Playlist "${name}" was updated.`,
   playlistDoesNotRequireUpdate: (name: string) => `Playlist "${name}" does not require an update.`,
-  syncCycleCompleted: (label: string, updated: number, total: number) =>
-    `Updated playlists for ${label} (updated=${updated}/${total}).`,
+  syncCycleCompleted: (label: string, updated: number, total: number, requests: number) =>
+    `Updated playlists for ${label} (updated=${updated}/${total}, Spotify API requests: ${requests}).`,
   syncRateLimited: (retryAfter: number, nextAttempt: string) =>
     `Sync rate-limited. Retry after ${retryAfter}s. Next attempt after ${nextAttempt}.`,
   syncFailed: (mode: string, message: string) => `Sync failed (${mode}): ${message}`,

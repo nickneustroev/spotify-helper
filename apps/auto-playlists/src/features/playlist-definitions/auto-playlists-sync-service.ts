@@ -7,6 +7,10 @@ import { t } from "../../i18n/index.js";
 import type { AutoPlaylistDefinition } from "./auto-playlist-definition.js";
 import { fetchExcludedTrackIds } from "../exclude-playlist/exclude-playlist.js";
 import {
+  createPlaylistResolveContext,
+  type PlaylistResolveContext,
+} from "./playlist-resolve-context.js";
+import {
   filterSavedTracks,
   type SavedTracksFetchRequirements,
   type SavedTracksSource,
@@ -47,6 +51,7 @@ export class AutoPlaylistsSyncService {
   private nextAllowedSyncAtEpochMs = 0;
   private readonly playlistIdsByDefinitionKey = new Map<string, string>();
   private readonly lastHashesByDefinitionKey = new Map<string, string>();
+  private currentResolveContext: PlaylistResolveContext | null = null;
 
   constructor(
     private readonly spotifyClient: SpotifyClient,
@@ -113,6 +118,11 @@ export class AutoPlaylistsSyncService {
       const runExclusive = this.options.runExclusive ?? defaultRunExclusive;
       await runExclusive(this.options.syncModeName, async () => {
         this.logger.info(t("syncCycleStarted", this.options.syncLogLabel ?? this.options.syncModeName));
+        const resolveContext: PlaylistResolveContext = createPlaylistResolveContext(
+          this.spotifyClient,
+          this.logger,
+        );
+        this.currentResolveContext = resolveContext;
         await this.ensurePlaylists();
         const fetchSavedTracks = this.options.fetchSavedTracks ?? true;
         const databasePersistenceEnabled = this.options.isDatabasePersistenceEnabled?.() ?? true;
@@ -142,7 +152,11 @@ export class AutoPlaylistsSyncService {
           let trackUris: string[];
           if (definition.resolveTrackUrisAsync) {
             try {
-              trackUris = await definition.resolveTrackUrisAsync(this.spotifyClient, savedTracks);
+              trackUris = await definition.resolveTrackUrisAsync(
+                this.spotifyClient,
+                savedTracks,
+                resolveContext,
+              );
             } catch (error) {
               this.logger.warn(
                 t("playlistTrackResolveFailed", definition.playlistName, (error as Error).message),
@@ -200,6 +214,7 @@ export class AutoPlaylistsSyncService {
             this.options.syncLogLabel ?? this.options.syncModeName,
             syncedPlaylists,
             this.options.definitions.length,
+            this.spotifyClient.getCompletedRequestCount?.() ?? 0,
           ),
         );
       });
@@ -217,6 +232,7 @@ export class AutoPlaylistsSyncService {
         this.logger.warn(t("syncFailed", this.options.syncModeName, (error as Error).message));
       }
     } finally {
+      this.currentResolveContext = null;
       this.running = false;
     }
   }
@@ -277,6 +293,10 @@ export class AutoPlaylistsSyncService {
     const excludePlaylistName = this.options.excludePlaylistName;
     if (!excludePlaylistName || excludePlaylistName.trim().length === 0) {
       return new Set();
+    }
+
+    if (this.currentResolveContext) {
+      return this.currentResolveContext.getExcludedTrackIds(excludePlaylistName);
     }
 
     return fetchExcludedTrackIds(this.spotifyClient, excludePlaylistName, this.logger);

@@ -171,7 +171,7 @@ describe("createPlaylistRecentDefinitions", () => {
       "spotify:track:third",
     ]);
     expect(spotifyClient.findPlaylistByName).toHaveBeenCalledWith("Hard Rock");
-    expect(spotifyClient.getPlaylistItems).toHaveBeenCalledWith("playlist-rock");
+    expect(spotifyClient.getPlaylistItems).toHaveBeenCalledWith("playlist-rock", 13);
   });
 
   it("deduplicates tracks while filling the window", async () => {

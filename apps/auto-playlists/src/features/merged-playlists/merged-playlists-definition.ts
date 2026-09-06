@@ -5,6 +5,10 @@ import type { SpotifyClient } from "../../spotify/spotify-client.js";
 import { extractTrackId } from "../exclude-playlist/exclude-playlist.js";
 import { SavedTracksSource } from "../playlist-definitions/saved-tracks-source.js";
 import type { AutoPlaylistDefinition } from "../playlist-definitions/auto-playlist-definition.js";
+import {
+  createPlaylistResolveContext,
+  type PlaylistResolveContext,
+} from "../playlist-definitions/playlist-resolve-context.js";
 
 export interface MergedPlaylistDefinitionsOptions {
   merges: MergedPlaylistConfig[];
@@ -25,8 +29,10 @@ export function createMergedPlaylistDefinitions(
     async resolveTrackUrisAsync(
       spotifyClient: SpotifyClient,
       savedTracks?: SavedTrackItem[],
+      context?: PlaylistResolveContext,
     ): Promise<string[]> {
-      const collectedItems = await collectMergedSourceItems(spotifyClient, merge, options.logger);
+      const resolveContext = context ?? createPlaylistResolveContext(spotifyClient, options.logger);
+      const collectedItems = await collectMergedSourceItems(resolveContext, merge, options.logger);
       if (collectedItems === null) {
         return [];
       }
@@ -59,7 +65,7 @@ async function loadFavoritesForSavedOrder(
 }
 
 async function collectMergedSourceItems(
-  spotifyClient: SpotifyClient,
+  context: PlaylistResolveContext,
   merge: MergedPlaylistConfig,
   logger: Logger,
 ): Promise<PlaylistItem[] | null> {
@@ -67,14 +73,14 @@ async function collectMergedSourceItems(
   let foundSource = false;
 
   for (const sourceName of merge.sourceNames) {
-    const source = await spotifyClient.findPlaylistByName(sourceName);
+    const source = await context.findPlaylistByName(sourceName);
     if (!source) {
       logger.warn(t("mergedPlaylistSourceNotFound", merge.targetName, sourceName));
       continue;
     }
 
     try {
-      collectedItems.push(...(await spotifyClient.getPlaylistItems(source.id)));
+      collectedItems.push(...(await context.getPlaylistItems(source.id)));
     } catch (error) {
       logger.warn(
         t("mergedPlaylistSourceFetchFailed", merge.targetName, sourceName, (error as Error).message),

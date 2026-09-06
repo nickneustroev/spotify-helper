@@ -1,5 +1,6 @@
 import type { SavedTrackItem } from "../../shared/types.js";
 import type { SpotifyClient } from "../../spotify/spotify-client.js";
+import type { PlaylistResolveContext } from "./playlist-resolve-context.js";
 
 export interface AutoPlaylistDefinition {
   key: string;
@@ -9,6 +10,7 @@ export interface AutoPlaylistDefinition {
   resolveTrackUrisAsync?(
     spotifyClient: SpotifyClient,
     savedTracks?: SavedTrackItem[],
+    context?: PlaylistResolveContext,
   ): Promise<string[]>;
   buildCoverJpeg?(): Promise<Buffer>;
 }

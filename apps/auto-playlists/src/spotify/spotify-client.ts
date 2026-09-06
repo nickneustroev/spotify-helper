@@ -72,6 +72,7 @@ type TransportMode = "direct" | "proxy";
 export class SpotifyClient {
   private static readonly RATE_LIMIT_RETRY_ATTEMPTS = 2;
   private static readonly RATE_LIMIT_BUFFER_MS = 250;
+  private static readonly LONG_RATE_LIMIT_WARN_THRESHOLD_SECONDS = 300;
   private readonly auth: AuthManager;
   private readonly cfg: SpotifyClientConfig;
   private readonly log: Logger;
@@ -82,6 +83,11 @@ export class SpotifyClient {
   private lastRequestStartedAtEpochMs = 0;
   private requestQueue: Promise<void> = Promise.resolve();
   private currentUserId: string | null = null;
+  private completedRequestCount = 0;
+
+  public getCompletedRequestCount(): number {
+    return this.completedRequestCount;
+  }
 
   constructor(auth: AuthManager, cfg: SpotifyClientConfig, log: Logger, fetchImpl: typeof fetch = fetch) {
     this.auth = auth;
@@ -204,7 +210,7 @@ export class SpotifyClient {
     return payload;
   }
 
-  public async getPlaylistItems(playlistId: string): Promise<PlaylistItem[]> {
+  public async getPlaylistItems(playlistId: string, maxItems?: number): Promise<PlaylistItem[]> {
     const items: PlaylistItem[] = [];
     let nextUrl: string | null =
       `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/items?limit=50&fields=next,items(added_at,item(id,uri))`;
@@ -226,10 +232,14 @@ export class SpotifyClient {
         });
       }
 
+      if (maxItems !== undefined && items.length >= maxItems) {
+        break;
+      }
+
       nextUrl = payload.next;
     }
 
-    return items;
+    return maxItems !== undefined ? items.slice(0, maxItems) : items;
   }
 
   public async replacePlaylistItems(playlistId: string, trackUris: string[]): Promise<void> {
@@ -415,6 +425,11 @@ export class SpotifyClient {
       const retryAfterSeconds = parseRetryAfterSeconds(response.headers.get("retry-after"));
       this.bumpRateLimitWindow(retryAfterSeconds);
 
+      if (retryAfterSeconds >= SpotifyClient.LONG_RATE_LIMIT_WARN_THRESHOLD_SECONDS) {
+        const resumeAtIso = new Date(Date.now() + retryAfterSeconds * 1000).toISOString();
+        this.log.warn(t("spotifyRateLimitLongBan", retryAfterSeconds, resumeAtIso));
+      }
+
       if (rateLimitRetryAttempts <= 0) {
         throw new SpotifyRateLimitError(retryAfterSeconds);
       }
@@ -469,6 +484,7 @@ export class SpotifyClient {
     try {
       return await operation();
     } finally {
+      this.completedRequestCount += 1;
       release();
     }
   }

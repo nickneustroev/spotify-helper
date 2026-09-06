@@ -11,6 +11,8 @@ export const messages = {
   trackMonitoringDisabled: "Мониторинг треков отключен (TRACK_MONITORING_ENABLED=false).",
   spotifyRateLimitedBackingOff: (delayMs: number) =>
     `Spotify ограничил частоту запросов. Откладывание на ${delayMs}мс перед следующим опросом.`,
+  spotifyRateLimitLongBan: (retryAfterSeconds: number, resumeAtIso: string) =>
+    `Spotify ограничил запросы с долгим Retry-After (${retryAfterSeconds}с). Запросы приостановлены до ${resumeAtIso}.`,
   pollingFailed: (message: string, delayMs: number) =>
     `Ошибка опроса: ${message}. Следующая попытка через ${delayMs}мс.`,
 
@@ -45,8 +47,8 @@ export const messages = {
     `Плейлист "${name}" больше недоступен. Кэшированный ID удалён, будет создан заново при следующей синхронизации.`,
   playlistUpdated: (name: string) => `Плейлист "${name}" был обновлен.`,
   playlistDoesNotRequireUpdate: (name: string) => `Плейлист "${name}" не требует обновления.`,
-  syncCycleCompleted: (label: string, updated: number, total: number) =>
-    `Обновлены плейлисты ${label} (обновлено=${updated}/${total}).`,
+  syncCycleCompleted: (label: string, updated: number, total: number, requests: number) =>
+    `Обновлены плейлисты ${label} (обновлено=${updated}/${total}, запросов к Spotify: ${requests}).`,
   syncRateLimited: (retryAfter: number, nextAttempt: string) =>
     `Синхронизация ограничена по частоте. Повтор через ${retryAfter}с. Следующая попытка после ${nextAttempt}.`,
   syncFailed: (mode: string, message: string) => `Синхронизация не удалась (${mode}): ${message}`,

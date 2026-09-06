@@ -1,10 +1,16 @@
 import type { PlaylistRecentConfig } from "../../core/config.js";
 import { t } from "../../i18n/index.js";
-import type { Logger } from "../../shared/types.js";
+import type { Logger, SavedTrackItem } from "../../shared/types.js";
 import type { SpotifyClient } from "../../spotify/spotify-client.js";
-import { fetchExcludedTrackIds, extractTrackId } from "../exclude-playlist/exclude-playlist.js";
+import { extractTrackId } from "../exclude-playlist/exclude-playlist.js";
 import { generateRecentPlaylistCoverJpeg } from "../saved-recent/playlist-cover.js";
 import type { AutoPlaylistDefinition } from "../playlist-definitions/auto-playlist-definition.js";
+import {
+  createPlaylistResolveContext,
+  type PlaylistResolveContext,
+} from "../playlist-definitions/playlist-resolve-context.js";
+
+const PLAYLIST_RECENT_FETCH_BUFFER = 10;
 
 export interface PlaylistRecentDefinitionsOptions {
   configs: PlaylistRecentConfig[];
@@ -29,43 +35,54 @@ export function createPlaylistRecentDefinitions(
       ),
       playlistDescription: `Auto-maintained top ${windowSize} tracks from playlist "${config.sourceName}".`,
       resolveTrackUris: () => [],
-      async resolveTrackUrisAsync(spotifyClient: SpotifyClient): Promise<string[]> {
-        const source = await spotifyClient.findPlaylistByName(config.sourceName);
-        if (!source) {
-          options.logger.warn(t("recentFromPlaylistSourceNotFound", config.sourceName));
-          return [];
-        }
-
-        const excludedTrackIds = await fetchExcludedTrackIds(
-          spotifyClient,
-          options.excludePlaylistName ?? "",
-          options.logger,
-        );
-
-        const items = await spotifyClient.getPlaylistItems(source.id);
-        const seen = new Set<string>();
-        const trackUris: string[] = [];
-        for (const item of items) {
-          if (seen.has(item.trackUri)) {
-            continue;
-          }
-          seen.add(item.trackUri);
-
-          const trackId = extractTrackId(item.trackUri);
-          if (trackId !== null && excludedTrackIds.has(trackId)) {
-            continue;
-          }
-
-          trackUris.push(item.trackUri);
-          if (trackUris.length >= windowSize) {
-            break;
-          }
-        }
-        return trackUris;
+      async resolveTrackUrisAsync(
+        spotifyClient: SpotifyClient,
+        _savedTracks?: SavedTrackItem[],
+        context?: PlaylistResolveContext,
+      ): Promise<string[]> {
+        const resolveContext = context ?? createPlaylistResolveContext(spotifyClient, options.logger);
+        return resolvePlaylistRecentTrackUris(config, windowSize, options, resolveContext);
       },
       buildCoverJpeg: () => generateRecentPlaylistCoverJpeg(windowSize, options.coverColor),
     })),
   );
+}
+
+export async function resolvePlaylistRecentTrackUris(
+  config: PlaylistRecentConfig,
+  windowSize: number,
+  options: PlaylistRecentDefinitionsOptions,
+  context: PlaylistResolveContext,
+): Promise<string[]> {
+  const excludedTrackIds = await context.getExcludedTrackIds(options.excludePlaylistName ?? "");
+
+  const source = await context.findPlaylistByName(config.sourceName);
+  if (!source) {
+    options.logger.warn(t("recentFromPlaylistSourceNotFound", config.sourceName));
+    return [];
+  }
+
+  const maxItems = windowSize + excludedTrackIds.size + PLAYLIST_RECENT_FETCH_BUFFER;
+  const items = await context.getPlaylistItems(source.id, maxItems);
+  const seen = new Set<string>();
+  const trackUris: string[] = [];
+  for (const item of items) {
+    if (seen.has(item.trackUri)) {
+      continue;
+    }
+    seen.add(item.trackUri);
+
+    const trackId = extractTrackId(item.trackUri);
+    if (trackId !== null && excludedTrackIds.has(trackId)) {
+      continue;
+    }
+
+    trackUris.push(item.trackUri);
+    if (trackUris.length >= windowSize) {
+      break;
+    }
+  }
+  return trackUris;
 }
 
 export function buildPlaylistRecentName(

@@ -120,7 +120,9 @@ describe("AutoPlaylistsSyncService", () => {
     expect(log.info).toHaveBeenCalledWith("Started updating playlists for frequent.");
     expect(log.info).toHaveBeenCalledWith('Playlist "SAVED RECENT 2 [AUTO]" does not require an update.');
     expect(log.info).toHaveBeenCalledWith('Playlist "SAVED RECENT 3 [AUTO]" does not require an update.');
-    expect(log.info).toHaveBeenCalledWith("Updated playlists for frequent (updated=0/2).");
+    expect(log.info).toHaveBeenCalledWith(
+  "Updated playlists for frequent (updated=0/2, Spotify API requests: 0).",
+);
   });
 
   it("archives removed tracks from previous snapshot", async () => {
@@ -354,7 +356,9 @@ describe("AutoPlaylistsSyncService", () => {
 
     expect(log.info).toHaveBeenCalledWith("Started updating playlists for rare.");
     expect(log.info).toHaveBeenCalledWith('Playlist "SAVED RECENT 2 [AUTO]" was updated.');
-    expect(log.info).toHaveBeenCalledWith("Updated playlists for rare (updated=1/1).");
+    expect(log.info).toHaveBeenCalledWith(
+  "Updated playlists for rare (updated=1/1, Spotify API requests: 0).",
+);
   });
 
   it("reuses cached playlist ids from app state without searching by name", async () => {
@@ -862,7 +866,9 @@ describe("AutoPlaylistsSyncService", () => {
 
     expect(replacePlaylistItems).not.toHaveBeenCalled();
     expect(log.warn).toHaveBeenCalledWith('Failed to resolve tracks for playlist "MERGED [AUTO]": source lookup failed');
-    expect(log.info).toHaveBeenCalledWith("Updated playlists for merged (updated=0/1).");
+    expect(log.info).toHaveBeenCalledWith(
+  "Updated playlists for merged (updated=0/1, Spotify API requests: 0).",
+);
   });
 
   it("backs off when Spotify rate limits the current sync mode", async () => {
@@ -953,7 +959,7 @@ describe("AutoPlaylistsSyncService", () => {
       );
       expect(log.info).toHaveBeenCalledWith("Начато обновление плейлистов недавно сохранённого.");
       expect(log.info).toHaveBeenCalledWith(
-        "Обновлены плейлисты недавно сохранённого (обновлено=1/1).",
+        "Обновлены плейлисты недавно сохранённого (обновлено=1/1, запросов к Spotify: 0).",
       );
     });
     service.stop();

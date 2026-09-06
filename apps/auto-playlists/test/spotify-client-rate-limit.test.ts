@@ -108,6 +108,28 @@ describe("SpotifyClient rate limiting", () => {
     expect(fetchImpl).toHaveBeenCalledTimes(3);
   });
 
+  it("warns with a resume timestamp when retry-after is long", async () => {
+    vi.useFakeTimers();
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response("{}", {
+        status: 429,
+        headers: {
+          "retry-after": "76814",
+        },
+      }),
+    );
+
+    const client = createClient(fetchImpl);
+    const request = expect(client.getCurrentUserId()).rejects.toBeInstanceOf(SpotifyRateLimitError);
+
+    await vi.runAllTimersAsync();
+    await request;
+
+    expect(log.warn).toHaveBeenCalledWith(
+      expect.stringMatching(/Requests are paused until \d{4}-\d{2}-\d{2}T/),
+    );
+  });
+
   it("uses configured proxy when startup validation succeeds", async () => {
     const fetchImpl = vi.fn<typeof fetch>().mockImplementation(async (_url, init) => {
       expect(init && "dispatcher" in init && init.dispatcher).toBeTruthy();
