@@ -82,7 +82,7 @@ describe("SpotifyClient.getPlaylistItems", () => {
 });
 
 describe("SpotifyClient request counter", () => {
-  it("counts completed requests", async () => {
+  it("counts completed requests and resets on consume", async () => {
     const fetchImpl = vi.fn<typeof fetch>().mockImplementation(async (input) => {
       const url = String(input);
       if (url.includes("playlists")) {
@@ -102,6 +102,10 @@ describe("SpotifyClient request counter", () => {
     await client.getCurrentUserId();
     await client.getPlaylistItems("p1", 1);
     await client.getPlaylistItems("p1", 1);
-    expect(client.getCompletedRequestCount()).toBe(3);
+    expect(client.consumeCompletedRequestCount()).toBe(3);
+
+    await client.getPlaylistItems("p2", 1);
+    expect(client.consumeCompletedRequestCount()).toBe(1);
+    expect(client.consumeCompletedRequestCount()).toBe(0);
   });
 });

@@ -85,8 +85,10 @@ export class SpotifyClient {
   private currentUserId: string | null = null;
   private completedRequestCount = 0;
 
-  public getCompletedRequestCount(): number {
-    return this.completedRequestCount;
+  public consumeCompletedRequestCount(): number {
+    const count = this.completedRequestCount;
+    this.completedRequestCount = 0;
+    return count;
   }
 
   constructor(auth: AuthManager, cfg: SpotifyClientConfig, log: Logger, fetchImpl: typeof fetch = fetch) {

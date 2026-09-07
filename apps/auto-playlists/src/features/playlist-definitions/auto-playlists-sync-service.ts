@@ -123,6 +123,7 @@ export class AutoPlaylistsSyncService {
           this.logger,
         );
         this.currentResolveContext = resolveContext;
+        this.spotifyClient.consumeCompletedRequestCount?.();
         await this.ensurePlaylists();
         const fetchSavedTracks = this.options.fetchSavedTracks ?? true;
         const databasePersistenceEnabled = this.options.isDatabasePersistenceEnabled?.() ?? true;
@@ -214,7 +215,7 @@ export class AutoPlaylistsSyncService {
             this.options.syncLogLabel ?? this.options.syncModeName,
             syncedPlaylists,
             this.options.definitions.length,
-            this.spotifyClient.getCompletedRequestCount?.() ?? 0,
+            this.spotifyClient.consumeCompletedRequestCount?.() ?? 0,
           ),
         );
       });
