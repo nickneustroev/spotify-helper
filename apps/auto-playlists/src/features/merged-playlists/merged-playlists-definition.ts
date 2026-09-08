@@ -73,13 +73,13 @@ async function collectMergedSourceItems(
   let foundSource = false;
 
   for (const sourceName of merge.sourceNames) {
-    const source = await context.findPlaylistByName(sourceName);
-    if (!source) {
-      logger.warn(t("mergedPlaylistSourceNotFound", merge.targetName, sourceName));
-      continue;
-    }
-
     try {
+      const source = await context.findPlaylistByName(sourceName);
+      if (!source) {
+        logger.warn(t("mergedPlaylistSourceNotFound", merge.targetName, sourceName));
+        continue;
+      }
+
       collectedItems.push(...(await context.getPlaylistItems(source.id)));
     } catch (error) {
       logger.warn(

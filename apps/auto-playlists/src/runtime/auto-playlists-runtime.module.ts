@@ -9,6 +9,7 @@ import {
   ARCHIVE_REPOSITORY,
   AUTO_PLAYLISTS_FREQUENT_SYNC_SERVICE,
   AUTO_PLAYLISTS_MERGED_SYNC_SERVICE,
+  AUTO_PLAYLISTS_PLAYLIST_RECENT_SYNC_SERVICE,
   AUTO_PLAYLISTS_RARE_SYNC_SERVICE,
   AUTO_PLAYLISTS_SYNC_RUNNER,
   CONSOLE_NOTIFIER,
@@ -237,6 +238,49 @@ import { TrackWatcher } from "./track-watcher.js";
             return savedTracksSource.getAllSavedTracks();
           },
         });
+
+        return mergedDefinitions.length > 0
+          ? new AutoPlaylistsSyncService(
+              spotifyClient,
+              savedTracksSource,
+              archiveRepository,
+              appStateRepository,
+              log,
+              {
+                definitions: mergedDefinitions,
+                syncIntervalMs: cfg.autoPlaylistsRareSyncIntervalMs,
+                playlistPrivate: true,
+                syncModeName: "merged",
+                syncLogLabel: t("mergedPlaylistsLabel"),
+                runExclusive,
+                syncRemovedTracksArchive: false,
+                isDatabasePersistenceEnabled: () => databaseFeatures.isPersistenceEnabled(),
+                fetchSavedTracks: false,
+              },
+            )
+          : null;
+      },
+    },
+    {
+      provide: AUTO_PLAYLISTS_PLAYLIST_RECENT_SYNC_SERVICE,
+      inject: [
+        SPOTIFY_CLIENT,
+        ARCHIVE_REPOSITORY,
+        APP_STATE_REPOSITORY,
+        APP_LOGGER,
+        APP_CONFIG,
+        AUTO_PLAYLISTS_SYNC_RUNNER,
+        DATABASE_FEATURES,
+      ],
+      useFactory: (
+        spotifyClient: SpotifyClient,
+        archiveRepository: ArchiveRepository,
+        appStateRepository: AppStateRepository,
+        log: Logger,
+        cfg: AppConfig,
+        runExclusive: SyncRunner,
+        databaseFeatures: DatabaseFeatures,
+      ) => {
         const recentDefinitions = createPlaylistRecentDefinitions({
           configs: cfg.autoPlaylistsRecentFromPlaylists,
           playlistPrefix: cfg.autoPlaylistsPlaylistPrefix,
@@ -245,21 +289,20 @@ import { TrackWatcher } from "./track-watcher.js";
           excludePlaylistName: cfg.excludePlaylistTitle,
           logger: log,
         });
-        const definitions = [...mergedDefinitions, ...recentDefinitions];
 
-        return definitions.length > 0
+        return recentDefinitions.length > 0
           ? new AutoPlaylistsSyncService(
               spotifyClient,
-              savedTracksSource,
+              new SavedTracksSource(spotifyClient),
               archiveRepository,
               appStateRepository,
               log,
               {
-                definitions,
+                definitions: recentDefinitions,
                 syncIntervalMs: cfg.autoPlaylistsRareSyncIntervalMs,
                 playlistPrivate: true,
-                syncModeName: "merged",
-                syncLogLabel: t("derivedPlaylistsLabel"),
+                syncModeName: "playlist-recent",
+                syncLogLabel: t("playlistRecentPlaylistsLabel"),
                 runExclusive,
                 syncRemovedTracksArchive: false,
                 isDatabasePersistenceEnabled: () => databaseFeatures.isPersistenceEnabled(),

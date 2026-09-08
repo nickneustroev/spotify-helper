@@ -13,6 +13,8 @@ export const messages = {
     `Spotify rate limited requests. Backing off for ${delayMs}ms before next poll.`,
   spotifyRateLimitLongBan: (retryAfterSeconds: number, resumeAtIso: string) =>
     `Spotify rate limit hit with a long Retry-After (${retryAfterSeconds}s). Requests are paused until ${resumeAtIso}.`,
+  spotifyTransportRetry: (request: string, attempt: number, message: string) =>
+    `Spotify request ${request} failed (attempt ${attempt}): ${message}. Retrying...`,
   pollingFailed: (message: string, delayMs: number) =>
     `Polling failed: ${message}. Next attempt in ${delayMs}ms.`,
 
@@ -20,8 +22,8 @@ export const messages = {
 
   savedRecentPlaylistsLabel: "recently saved",
   savedInYearPlaylistsLabel: "by year",
-  mergedPlaylistsLabel: "merged playlists",
-  derivedPlaylistsLabel: "derived playlists",
+  mergedPlaylistsLabel: "merged",
+  playlistRecentPlaylistsLabel: "top of playlist",
   mergedPlaylistSourceNotFound: (target: string, source: string) =>
     `Source playlist "${source}" for merged playlist "${target}" was not found. It will be skipped until the next sync.`,
   mergedPlaylistSourceFetchFailed: (target: string, source: string, message: string) =>
@@ -38,6 +40,8 @@ export const messages = {
     `Failed to fetch tracks of exclude playlist "${name}": ${message}. Track exclusions are skipped until the next sync.`,
   playlistTrackResolveFailed: (name: string, message: string) =>
     `Failed to resolve tracks for playlist "${name}": ${message}`,
+  playlistResolveEmpty: (name: string) =>
+    `No tracks resolved for playlist "${name}". The playlist is left untouched to avoid wiping its content.`,
   noPlaylistDefinitionsConfigured: "Auto playlists are not configured.",
   syncActive: (label: string, definitions: number, interval: number, initialDelay: number) =>
     `Auto playlists are now running for ${label} (playlists=${definitions}, interval=${interval}ms, initialDelay=${initialDelay}ms).`,

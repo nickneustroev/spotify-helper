@@ -13,6 +13,8 @@ export const messages = {
     `Spotify ограничил частоту запросов. Откладывание на ${delayMs}мс перед следующим опросом.`,
   spotifyRateLimitLongBan: (retryAfterSeconds: number, resumeAtIso: string) =>
     `Spotify ограничил запросы с долгим Retry-After (${retryAfterSeconds}с). Запросы приостановлены до ${resumeAtIso}.`,
+  spotifyTransportRetry: (request: string, attempt: number, message: string) =>
+    `Ошибка запроса к Spotify ${request} (попытка ${attempt}): ${message}. Повторяю...`,
   pollingFailed: (message: string, delayMs: number) =>
     `Ошибка опроса: ${message}. Следующая попытка через ${delayMs}мс.`,
 
@@ -20,8 +22,8 @@ export const messages = {
 
   savedRecentPlaylistsLabel: "недавно сохранённого",
   savedInYearPlaylistsLabel: "по годам",
-  mergedPlaylistsLabel: "сборные плейлисты",
-  derivedPlaylistsLabel: "производные плейлисты",
+  mergedPlaylistsLabel: "сборных",
+  playlistRecentPlaylistsLabel: "первых N треков плейлиста",
   mergedPlaylistSourceNotFound: (target: string, source: string) =>
     `Плейлист-источник "${source}" для сборного плейлиста "${target}" не найден. Он будет пропущен до следующей синхронизации.`,
   mergedPlaylistSourceFetchFailed: (target: string, source: string, message: string) =>
@@ -38,6 +40,8 @@ export const messages = {
     `Не удалось получить треки плейлиста исключений "${name}": ${message}. Исключение треков пропущено до следующей синхронизации.`,
   playlistTrackResolveFailed: (name: string, message: string) =>
     `Не удалось получить треки для плейлиста "${name}": ${message}`,
+  playlistResolveEmpty: (name: string) =>
+    `Для плейлиста "${name}" не получено ни одного трека. Плейлист оставлен без изменений, чтобы не очистить его содержимое.`,
   noPlaylistDefinitionsConfigured: "Автоплейлисты не настроены.",
   syncActive: (label: string, definitions: number, interval: number, initialDelay: number) =>
     `Будут обновляться автоплейлисты ${label} (плейлистов=${definitions}, интервал=${interval}мс, начальная задержка=${initialDelay}мс).`,

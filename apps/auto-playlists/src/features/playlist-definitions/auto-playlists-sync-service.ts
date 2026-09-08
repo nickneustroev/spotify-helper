@@ -174,6 +174,11 @@ export class AutoPlaylistsSyncService {
             continue;
           }
 
+          if (trackUris.length === 0) {
+            this.logger.warn(t("playlistResolveEmpty", definition.playlistName));
+            continue;
+          }
+
           let synced = false;
           for (let attempt = 0; attempt < 2; attempt += 1) {
             try {

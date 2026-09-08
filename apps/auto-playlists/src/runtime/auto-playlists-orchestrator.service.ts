@@ -4,6 +4,7 @@ import { type AppConfig, getSafeConfigForLogs } from "../core/config.js";
 import {
   AUTO_PLAYLISTS_FREQUENT_SYNC_SERVICE,
   AUTO_PLAYLISTS_MERGED_SYNC_SERVICE,
+  AUTO_PLAYLISTS_PLAYLIST_RECENT_SYNC_SERVICE,
   AUTO_PLAYLISTS_RARE_SYNC_SERVICE,
   APP_CONFIG,
   APP_LOGGER,
@@ -39,6 +40,8 @@ export class AutoPlaylistsOrchestratorService implements OnModuleInit, OnApplica
     private readonly autoPlaylistsRareSyncService: AutoPlaylistsSyncService | null,
     @Inject(AUTO_PLAYLISTS_MERGED_SYNC_SERVICE)
     private readonly autoPlaylistsMergedSyncService: AutoPlaylistsSyncService | null,
+    @Inject(AUTO_PLAYLISTS_PLAYLIST_RECENT_SYNC_SERVICE)
+    private readonly autoPlaylistsPlaylistRecentSyncService: AutoPlaylistsSyncService | null,
   ) {}
 
   public async onModuleInit(): Promise<void> {
@@ -57,7 +60,8 @@ export class AutoPlaylistsOrchestratorService implements OnModuleInit, OnApplica
     if (
       !this.autoPlaylistsFrequentSyncService &&
       !this.autoPlaylistsRareSyncService &&
-      !this.autoPlaylistsMergedSyncService
+      !this.autoPlaylistsMergedSyncService &&
+      !this.autoPlaylistsPlaylistRecentSyncService
     ) {
       this.log.info(t("noPlaylistDefinitionsConfigured"));
     }
@@ -65,6 +69,7 @@ export class AutoPlaylistsOrchestratorService implements OnModuleInit, OnApplica
     this.autoPlaylistsFrequentSyncService?.start();
     this.autoPlaylistsRareSyncService?.start();
     this.autoPlaylistsMergedSyncService?.start();
+    this.autoPlaylistsPlaylistRecentSyncService?.start();
   }
 
   public async onApplicationShutdown(signal?: string): Promise<void> {
@@ -78,6 +83,7 @@ export class AutoPlaylistsOrchestratorService implements OnModuleInit, OnApplica
     this.autoPlaylistsFrequentSyncService?.stop();
     this.autoPlaylistsRareSyncService?.stop();
     this.autoPlaylistsMergedSyncService?.stop();
+    this.autoPlaylistsPlaylistRecentSyncService?.stop();
     await this.prisma?.$disconnect();
   }
 }

@@ -109,3 +109,36 @@ describe("SpotifyClient request counter", () => {
     expect(client.consumeCompletedRequestCount()).toBe(0);
   });
 });
+
+describe("SpotifyClient transport retry", () => {
+  it("retries a request once when the transport fails and succeeds on the second attempt", async () => {
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockRejectedValueOnce(new Error("The operation was aborted due to timeout"))
+      .mockResolvedValue(
+        new Response(JSON.stringify({ id: "user-1" }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      );
+
+    const client = createClient(fetchImpl);
+
+    await expect(client.getCurrentUserId()).resolves.toBe("user-1");
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(log.warn).toHaveBeenCalledWith(
+      expect.stringContaining("Retrying..."),
+    );
+  });
+
+  it("throws after the retry attempt fails as well", async () => {
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockRejectedValue(new Error("The operation was aborted due to timeout"));
+
+    const client = createClient(fetchImpl);
+
+    await expect(client.getCurrentUserId()).rejects.toThrow(/timed out after/);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+});

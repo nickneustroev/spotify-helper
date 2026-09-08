@@ -7,7 +7,8 @@ describe("playlist labels i18n", () => {
 
     expect(t("savedRecentPlaylistsLabel")).toBe("recently saved");
     expect(t("savedInYearPlaylistsLabel")).toBe("by year");
-    expect(t("derivedPlaylistsLabel")).toBe("derived playlists");
+    expect(t("mergedPlaylistsLabel")).toBe("merged");
+    expect(t("playlistRecentPlaylistsLabel")).toBe("top of playlist");
   });
 
   it("returns russian playlist labels for RU locale", () => {
@@ -15,6 +16,7 @@ describe("playlist labels i18n", () => {
 
     expect(t("savedRecentPlaylistsLabel")).toBe("недавно сохранённого");
     expect(t("savedInYearPlaylistsLabel")).toBe("по годам");
-    expect(t("derivedPlaylistsLabel")).toBe("производные плейлисты");
+    expect(t("mergedPlaylistsLabel")).toBe("сборных");
+    expect(t("playlistRecentPlaylistsLabel")).toBe("первых N треков плейлиста");
   });
 });

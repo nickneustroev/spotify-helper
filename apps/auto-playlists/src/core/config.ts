@@ -11,6 +11,7 @@ const DEFAULT_SAVED_RECENT_COVER_COLOR = "000000";
 const DEFAULT_SAVED_IN_YEAR_COVER_COLOR = "060E73";
 const DEFAULT_RECENT_FROM_PLAYLISTS_COVER_COLOR = "14532D";
 const DEFAULT_APP_LOCALE = "EN";
+const DEFAULT_REQUEST_TIMEOUT_MS = 10000;
 
 const savedRecentWindowsSchema = z
   .string()
@@ -52,6 +53,7 @@ const schema = z.object({
     .transform((v) => v !== "false")
     .default(true),
   DATABASE_URL: optionalEnv(z.string()).default(""),
+  REQUEST_TIMEOUT_MS: optionalEnv(z.coerce.number().int().min(1000)).default(DEFAULT_REQUEST_TIMEOUT_MS),
   AUTO_PLAYLISTS_PLAYLIST_PREFIX: optionalEnv(z.string()).default(""),
   AUTO_PLAYLISTS_PLAYLIST_SUFFIX: playlistSuffixSchema,
   AUTO_PLAYLISTS_FREQUENT_SYNC_INTERVAL_MS: optionalEnv(
@@ -125,7 +127,7 @@ export function loadConfig(): AppConfig {
     spotifyMinRequestGapMs: env.SPOTIFY_MIN_REQUEST_GAP_MS,
     trackMonitoringEnabled: env.TRACK_MONITORING_ENABLED,
     databaseUrl: env.DATABASE_URL,
-    requestTimeoutMs: 5000,
+    requestTimeoutMs: env.REQUEST_TIMEOUT_MS,
     autoPlaylistsPlaylistPrefix: env.AUTO_PLAYLISTS_PLAYLIST_PREFIX,
     autoPlaylistsPlaylistSuffix: env.AUTO_PLAYLISTS_PLAYLIST_SUFFIX,
     autoPlaylistsFrequentSyncIntervalMs: env.AUTO_PLAYLISTS_FREQUENT_SYNC_INTERVAL_MS,

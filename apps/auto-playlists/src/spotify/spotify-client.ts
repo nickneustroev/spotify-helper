@@ -73,6 +73,8 @@ export class SpotifyClient {
   private static readonly RATE_LIMIT_RETRY_ATTEMPTS = 2;
   private static readonly RATE_LIMIT_BUFFER_MS = 250;
   private static readonly LONG_RATE_LIMIT_WARN_THRESHOLD_SECONDS = 300;
+  private static readonly TRANSPORT_RETRY_ATTEMPTS = 1;
+  private static readonly TRANSPORT_RETRY_DELAY_MS = 1000;
   private readonly auth: AuthManager;
   private readonly cfg: SpotifyClientConfig;
   private readonly log: Logger;
@@ -412,7 +414,7 @@ export class SpotifyClient {
     const requestDescription = describeRequest(init.method, url);
     let response: Response;
     try {
-      response = await this.fetchWithTransport(url, init, headers, modeOverride ?? this.transportMode);
+      response = await this.fetchWithTransportWithRetry(url, init, headers, modeOverride ?? this.transportMode);
     } catch (error) {
       throw new Error(buildSpotifyTransportErrorMessage(requestDescription, error, this.cfg.requestTimeoutMs));
     }
@@ -508,6 +510,29 @@ export class SpotifyClient {
     }
 
     return this.fetchImpl(url, requestInit);
+  }
+
+  private async fetchWithTransportWithRetry(
+    url: string,
+    init: RequestInit,
+    headers: Headers,
+    mode: TransportMode,
+  ): Promise<Response> {
+    let lastError: unknown;
+    for (let attempt = 0; attempt <= SpotifyClient.TRANSPORT_RETRY_ATTEMPTS; attempt += 1) {
+      try {
+        return await this.fetchWithTransport(url, init, headers, mode);
+      } catch (error) {
+        lastError = error;
+        if (attempt < SpotifyClient.TRANSPORT_RETRY_ATTEMPTS) {
+          this.log.warn(
+            t("spotifyTransportRetry", describeRequest(init.method, url), attempt + 1, (error as Error).message),
+          );
+          await sleep(SpotifyClient.TRANSPORT_RETRY_DELAY_MS * (attempt + 1));
+        }
+      }
+    }
+    throw lastError;
   }
 
   private canUseProxy(): boolean {

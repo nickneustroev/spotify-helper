@@ -174,7 +174,7 @@ describe("SpotifyClient rate limiting", () => {
     expect(log.warn).toHaveBeenCalledWith(
       "A proxy is configured but not working, so a direct connection will be used. Reason: Spotify request GET /v1/me failed before response: proxy unreachable",
     );
-    expect(fetchImpl).toHaveBeenCalledTimes(3);
+    expect(fetchImpl).toHaveBeenCalledTimes(4);
   });
 
   it("stops startup when direct Spotify connection is not fully available", async () => {
